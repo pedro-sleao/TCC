@@ -1,0 +1,12 @@
+{
+    "C_Cpp.intelliSenseEngine": "default",
+    "idf.espIdfPath": "/home/pedro/esp/esp-idf",
+    "idf.openOcdConfigs": [
+        "board/esp32-wrover-kit-3.3v.cfg"
+    ],
+    "idf.port": "/dev/ttyS0",
+    "idf.toolsPath": "/home/pedro/.espressif",
+    "files.associations": {
+        "freertos.h": "c"
+    }
+}
