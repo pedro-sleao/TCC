@@ -87,6 +87,7 @@ void initialise_wifi(void)
     assert(sta_netif);
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    
     ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
 
     ESP_ERROR_CHECK( esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL) );
@@ -100,7 +101,7 @@ void initialise_wifi(void)
 static void smartconfig_task(void * parm)
 {
     EventBits_t uxBits;
-    ESP_ERROR_CHECK( esp_smartconfig_set_type(SC_TYPE_ESPTOUCH_V2) );
+    ESP_ERROR_CHECK( esp_smartconfig_set_type(SC_TYPE_ESPTOUCH) );
     smartconfig_start_config_t cfg = SMARTCONFIG_START_CONFIG_DEFAULT();
     ESP_ERROR_CHECK( esp_smartconfig_start(&cfg) );
     while (1) {
@@ -114,4 +115,10 @@ static void smartconfig_task(void * parm)
             vTaskDelete(NULL);
         }
     }
+}
+
+bool is_wifi_connected(void)
+{
+    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group, CONNECTED_BIT, false, false, portMAX_DELAY);
+    return (bits & CONNECTED_BIT);
 }
