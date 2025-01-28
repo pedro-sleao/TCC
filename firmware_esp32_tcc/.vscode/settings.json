@@ -12,6 +12,8 @@
         "task.h": "c",
         "esp_http_client.h": "c",
         "mqtt.h": "c",
-        "event_groups.h": "c"
+        "event_groups.h": "c",
+        "esp_mac.h": "c",
+        "gpio.h": "c"
     }
 }

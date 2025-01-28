@@ -1,3 +1,2 @@
-idf_component_register(SRCS "mqtt.c" "ota.c" "main.c"
-                            "smartconfig.c"
+idf_component_register(SRCS "main.c"
                     INCLUDE_DIRS ".")

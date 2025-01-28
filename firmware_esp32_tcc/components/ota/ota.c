@@ -5,7 +5,7 @@
 #include "esp_mac.h"
 #include "esp_log.h"
 
-#include "mqtt.h"
+#include "mqtt_service.h"
 
 static const char *TAG = "simple_ota_example";
 

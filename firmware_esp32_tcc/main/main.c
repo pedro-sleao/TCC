@@ -9,9 +9,9 @@
 #include "nvs_flash.h"
 #include "esp_mac.h"
 
-#include "smartconfig.h"
+#include "wifi_manager.h"
 #include "ota.h"
-#include "mqtt.h"
+#include "mqtt_service.h"
 
 static const char *TAG = "main";
 
@@ -27,11 +27,12 @@ void app_main(void)
         err = nvs_flash_init();
     }
 
-    ESP_ERROR_CHECK(esp_netif_init());
-
     initialise_wifi();
 
-    while (!is_wifi_connected());
+    while (!is_wifi_connected()) {
+        ESP_LOGI(TAG, "Waiting for Wi-Fi connection...");
+        vTaskDelay(pdMS_TO_TICKS(500));
+    };
 
     mqtt_app_start();
 
