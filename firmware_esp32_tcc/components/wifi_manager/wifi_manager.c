@@ -133,6 +133,8 @@ void initialise_wifi(void)
         ESP_ERROR_CHECK( esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
         ESP_ERROR_CHECK( esp_wifi_start() );
 
+        esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+
         int max_retries = 20; // Timeout of 10 seconds (20 * 500 ms)
         int retries = 0;
 

@@ -5,6 +5,7 @@
 #include "esp_event.h"
 #include "mqtt_client.h"
 #include "esp_mac.h"
+#include "esp_wifi.h"
 
 #include "mqtt_service.h"
 
@@ -24,7 +25,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
         msg_id = esp_mqtt_client_subscribe(client, "firmware_update", 0);
-        esp_mqtt_client_subscribe(client, "teste", 0);
+        esp_mqtt_client_subscribe(client, "wifi", 0);
         ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
         break;
     case MQTT_EVENT_DISCONNECTED:
@@ -46,6 +47,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         if (strncmp(event->topic, "firmware_update", event->topic_len) == 0) {
             xEventGroupSetBits(mqtt_event_group, MQTT_OTA_EVENT);
             strncpy(ota_url, event->data, event->data_len);
+        }
+        if (strncmp(event->topic, "wifi", event->topic_len) == 0) {
+            esp_wifi_disconnect();
         }
         break;
     case MQTT_EVENT_ERROR:
