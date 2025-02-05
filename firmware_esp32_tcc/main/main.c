@@ -14,6 +14,7 @@
 #include "wifi_manager.h"
 #include "ota.h"
 #include "mqtt_service.h"
+#include "adc_manager.h"
 
 static const char *TAG = "main";
 
@@ -47,6 +48,16 @@ void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(500));
     };
 
+    adc_init();
+
+    int sensor_value;
+
+    while (1) {
+        read_adc_value(PH_SENSOR, &sensor_value);
+        printf("Sensor value: %d", sensor_value);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+    
     mqtt_app_start();
 
     init_ota();
