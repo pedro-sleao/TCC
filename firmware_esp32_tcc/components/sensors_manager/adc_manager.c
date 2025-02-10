@@ -39,8 +39,15 @@ void adc_init(void) {
     }
 }
 
+void adc_deinit(void) {
+    ESP_LOGI(TAG, "Deinitializing ADC1...");
+    ESP_ERROR_CHECK(adc_oneshot_del_unit(adc1_handle));
+}
+
 void read_adc_value(sensor_type_t sensor_type, int *sensor) {
     ESP_LOGI(TAG, "Starting to read the channel %d...", sensor_adc_channels[sensor_type]);
 
     adc_oneshot_read(adc1_handle, sensor_adc_channels[sensor_type], sensor);
 }
+
+
