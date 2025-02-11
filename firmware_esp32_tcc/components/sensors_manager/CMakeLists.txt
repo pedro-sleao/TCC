@@ -1,3 +1,3 @@
-idf_component_register(SRCS "adc_manager.c" "sensors_manager.c"
+idf_component_register(SRCS "sensors_manager.c"
                     INCLUDE_DIRS "include"
-                    REQUIRES "esp_adc" "driver")
+                    REQUIRES "driver" "adc_manager" "ds18x20")

@@ -6,6 +6,7 @@
 
 #include "sensors_manager.h"
 #include "adc_manager.h"
+#include "ds18x20.h"
 
 const static char *TAG = "sensors_manager";
 
@@ -15,6 +16,8 @@ static const gpio_num_t sensor_pins[] = {
     GPIO_NUM_18,
     GPIO_NUM_19
 };
+
+static const onewire_addr_t TEMPERATURE_SENSOR_ADDR = 0x5e00000000f59728;
 
 static void enable_sensor(sensor_type_t sensor_type) {
     gpio_set_level(sensor_pins[sensor_type], 1);
@@ -31,6 +34,7 @@ static void sensors_manager_task(void *parm) {
     }
 
     int turbidity;
+    float temperature;    
 
     while (1) {
         adc_init();
@@ -39,7 +43,12 @@ static void sensors_manager_task(void *parm) {
         disable_sensor(TURBIDITY_SENSOR);
         adc_deinit();
 
+        enable_sensor(TEMPERATURE_SENSOR);
+        ds18b20_measure_and_read(GPIO_NUM_4, TEMPERATURE_SENSOR_ADDR, &temperature);
+        disable_sensor(TEMPERATURE_SENSOR);
+
         ESP_LOGI(TAG, "Turbidity = %d", turbidity);
+        ESP_LOGI(TAG, "Temperature = %f", temperature);
         vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }
