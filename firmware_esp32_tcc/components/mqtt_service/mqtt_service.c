@@ -12,6 +12,7 @@
 static const char *TAG = "mqtt";
 
 static EventGroupHandle_t mqtt_event_group;
+static esp_mqtt_client_handle_t client;
 
 char ota_url[256];
 
@@ -47,9 +48,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         if (strncmp(event->topic, "firmware_update", event->topic_len) == 0) {
             xEventGroupSetBits(mqtt_event_group, MQTT_OTA_EVENT);
             strncpy(ota_url, event->data, event->data_len);
-        }
-        if (strncmp(event->topic, "wifi", event->topic_len) == 0) {
-            esp_wifi_disconnect();
         }
         break;
     case MQTT_EVENT_ERROR:
@@ -87,9 +85,14 @@ void mqtt_app_start(void)
 
     mqtt_event_group = xEventGroupCreate();
 
-    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
+    client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client);
     esp_mqtt_client_start(client);
+}
+
+void mqtt_publish(const char *topic, const char *message) {
+    ESP_LOGI(TAG, "Sending message to topic %s.", topic);
+    esp_mqtt_client_publish(client, topic, message, 0, 1, 0);
 }
 
 EventBits_t mqtt_event_get_bits(void)

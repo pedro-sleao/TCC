@@ -7,6 +7,7 @@
 #include "sensors_manager.h"
 #include "adc_manager.h"
 #include "ds18x20.h"
+#include "mqtt_service.h"
 
 const static char *TAG = "sensors_manager";
 
@@ -34,7 +35,8 @@ static void sensors_manager_task(void *parm) {
     }
 
     int turbidity;
-    float temperature;    
+    float temperature;
+    char message[32]; // Buffer for mqtt messages
 
     while (1) {
         adc_init();
@@ -47,8 +49,15 @@ static void sensors_manager_task(void *parm) {
         ds18b20_measure_and_read(GPIO_NUM_4, TEMPERATURE_SENSOR_ADDR, &temperature);
         disable_sensor(TEMPERATURE_SENSOR);
 
+       
+        snprintf(message, sizeof(message), "%d", turbidity);
+        mqtt_publish("sensor/turbidity", message);
+
+        snprintf(message, sizeof(message), "%.2f", temperature);
+        mqtt_publish("sensor/temperature", message);
+
         ESP_LOGI(TAG, "Turbidity = %d", turbidity);
-        ESP_LOGI(TAG, "Temperature = %f", temperature);
+        ESP_LOGI(TAG, "Temperature = %.2f", temperature);
         vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }
