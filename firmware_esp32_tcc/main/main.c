@@ -48,9 +48,9 @@ void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(500));
     };
 
-    init_sensors_task();
-
     mqtt_app_start();
+
+    init_sensors_task();
 
     init_ota();
 }
