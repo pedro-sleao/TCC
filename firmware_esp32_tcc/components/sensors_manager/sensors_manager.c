@@ -46,6 +46,8 @@ static void obtain_time(void)
         time(&now);
         localtime_r(&now, &timeinfo);
     }
+
+    esp_sntp_stop();
 }
 
 static void enable_sensor(sensor_type_t sensor_type) {
@@ -65,7 +67,7 @@ static void sensors_manager_task(void *parm) {
     struct tm timeinfo;
     char strftime_buf[64];
     // Buffer for mqtt messages
-    char message[32];
+    char message[128];
 
     // Set timezone to Brazil (Recife)
     setenv("TZ", "<-03>3", 1);
@@ -74,9 +76,6 @@ static void sensors_manager_task(void *parm) {
     obtain_time();
     time(&now);
     localtime_r(&now, &timeinfo);
-    // Print local time
-    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-    ESP_LOGI(TAG, "The current date/time in Recife is: %s", strftime_buf);
 
     for (int i = 0; i < sizeof(sensor_pins) / sizeof(sensor_pins[0]); i++) {
         gpio_set_direction(sensor_pins[i], GPIO_MODE_OUTPUT);
@@ -84,30 +83,34 @@ static void sensors_manager_task(void *parm) {
     }
 
     while (1) {
-        adc_init();
-        enable_sensor(TURBIDITY_SENSOR);
-        read_adc_value(TURBIDITY_SENSOR, &turbidity);
-        disable_sensor(TURBIDITY_SENSOR);
-        adc_deinit();
-
-        enable_sensor(TEMPERATURE_SENSOR);
-        ds18b20_measure_and_read(GPIO_NUM_4, TEMPERATURE_SENSOR_ADDR, &temperature);
-        disable_sensor(TEMPERATURE_SENSOR);
-
-       
-        snprintf(message, sizeof(message), "%d", turbidity);
-        mqtt_publish("sensor/turbidity", message);
-
-        snprintf(message, sizeof(message), "%.2f", temperature);
-        mqtt_publish("sensor/temperature", message);
-
         time(&now);
         localtime_r(&now, &timeinfo);
-        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-        ESP_LOGI(TAG, "The current date/time in Recife is: %s", strftime_buf);
-        ESP_LOGI(TAG, "Turbidity = %d", turbidity);
-        ESP_LOGI(TAG, "Temperature = %.2f", temperature);
-        vTaskDelay(pdMS_TO_TICKS(10000));
+        if (timeinfo.tm_sec % 10 == 0) {
+            adc_init();
+            enable_sensor(TURBIDITY_SENSOR);
+            read_adc_value(TURBIDITY_SENSOR, &turbidity);
+            disable_sensor(TURBIDITY_SENSOR);
+            adc_deinit();
+    
+            enable_sensor(TEMPERATURE_SENSOR);
+            ds18b20_measure_and_read(GPIO_NUM_4, TEMPERATURE_SENSOR_ADDR, &temperature);
+            disable_sensor(TEMPERATURE_SENSOR);
+
+            strftime(strftime_buf, sizeof(strftime_buf), "%Y-%m-%dT%H:%M:%S%z", &timeinfo);
+    
+            snprintf(message, sizeof(message), "{\"timestamp\": \"%s\", \"turbidity\": %d}", strftime_buf, turbidity);
+            mqtt_publish("sensor/turbidity", message);
+    
+            snprintf(message, sizeof(message), "{\"timestamp\": \"%s\", \"temperature\": %.2f}", strftime_buf, temperature);
+            mqtt_publish("sensor/temperature", message);
+    
+            ESP_LOGI(TAG, "Turbidity = %d", turbidity);
+            ESP_LOGI(TAG, "Temperature = %.2f", temperature);
+            ESP_LOGI(TAG, "The current date/time in Recife is: %s", strftime_buf);
+            vTaskDelay(pdMS_TO_TICKS(10000));
+        } else {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        }
     }
 }
 

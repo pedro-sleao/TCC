@@ -9,9 +9,9 @@ Este projeto visa desenvolver um sistema embarcado com conectividade Wi-Fi para 
 - [x] OTA
 - [x] Sensores
 - [x] SmartConfig (Conectar a esp ao WiFi utilizando o celular)
-- [ ] WiFi (Necessário corrigir um erro ao conectar em uma nova rede)
+- [ ] WiFi (Falta decidir o que fazer quando o WiFi cai após estar conectado)
 - [x] MQTT
-- [ ] Enviar os dados periódicamente (Necessário escolher o que será utilizado para contar o tempo entre cada envio, provavelmente o RTC)
+- [x] Usar o RTC para enviar os dados periodicamente
 
 ### PCB
 

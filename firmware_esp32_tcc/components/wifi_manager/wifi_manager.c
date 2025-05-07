@@ -51,14 +51,6 @@ static void event_handler(void* arg, esp_event_base_t event_base,
         memcpy(wifi_config.sta.ssid, evt->ssid, sizeof(wifi_config.sta.ssid));
         memcpy(wifi_config.sta.password, evt->password, sizeof(wifi_config.sta.password));
 
-#ifdef CONFIG_SET_MAC_ADDRESS_OF_TARGET_AP
-        wifi_config.sta.bssid_set = evt->bssid_set;
-        if (wifi_config.sta.bssid_set == true) {
-            ESP_LOGI(TAG, "Set MAC address of target AP: "MACSTR" ", MAC2STR(evt->bssid));
-            memcpy(wifi_config.sta.bssid, evt->bssid, sizeof(wifi_config.sta.bssid));
-        }
-#endif
-
         ESP_LOGI(TAG, "SSID:%s", wifi_config.sta.ssid);
         ESP_LOGI(TAG, "PASSWORD:%s", wifi_config.sta.password);
 
@@ -72,16 +64,17 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 
 static void smartconfig_task(void * parm)
 {
-    EventBits_t uxBits;
+    EventBits_t uxBitsWifi, uxBitsSC; // Eventbits for WiFi connection and Smartconfig status
     ESP_ERROR_CHECK( esp_smartconfig_set_type(SC_TYPE_ESPTOUCH) );
     smartconfig_start_config_t cfg = SMARTCONFIG_START_CONFIG_DEFAULT();
     ESP_ERROR_CHECK( esp_smartconfig_start(&cfg) );
     while (1) {
-        uxBits = xEventGroupWaitBits(s_wifi_event_group, CONNECTED_BIT | ESPTOUCH_DONE_BIT, false, false, portMAX_DELAY);
-        if (uxBits & CONNECTED_BIT) {
+        uxBitsWifi = xEventGroupWaitBits(s_wifi_event_group, CONNECTED_BIT, false, false, portMAX_DELAY);
+        uxBitsSC = xEventGroupWaitBits(s_wifi_event_group, ESPTOUCH_DONE_BIT, true, false, portMAX_DELAY);
+        if (uxBitsWifi & CONNECTED_BIT) {
             ESP_LOGI(TAG, "WiFi Connected to ap");
         }
-        if (uxBits & ESPTOUCH_DONE_BIT) {
+        if (uxBitsSC & ESPTOUCH_DONE_BIT) {
             ESP_LOGI(TAG, "SmartConfig complete");
             esp_smartconfig_stop();
             vTaskDelete(NULL);
@@ -94,7 +87,6 @@ bool is_wifi_connected(void)
     EventBits_t bits = xEventGroupGetBits(s_wifi_event_group);
     return (bits & CONNECTED_BIT) != 0;
 }
-
 
 void init_smartconfig(void)
 {
