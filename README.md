@@ -4,10 +4,8 @@ Este projeto visa desenvolver um sistema embarcado com conectividade Wi-Fi para 
 
 ## Sensores
 
-- **DS18B20**
-    - Temperatura
-- **Ph4502c**
-    - PH
+- **Sensor de temperatura DS18B20**
+- **Sensor de PH Ph4502c**
 - **Sensor de TDS**
 - **Sensor de turbidez**
 
