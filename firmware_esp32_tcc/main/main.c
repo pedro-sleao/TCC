@@ -15,6 +15,7 @@
 #include "ota.h"
 #include "mqtt_service.h"
 #include "sensors_manager.h"
+#include "device_info.h"
 
 static const char *TAG = "main";
 
@@ -47,6 +48,8 @@ void app_main(void)
         ESP_LOGI(TAG, "Waiting for Wi-Fi connection...");
         vTaskDelay(pdMS_TO_TICKS(500));
     };
+
+    device_info_init();
 
     mqtt_app_start();
 

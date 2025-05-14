@@ -73,7 +73,7 @@ void mqtt_app_start(void)
 {
     const esp_mqtt_client_config_t mqtt_cfg = {
         .broker = {
-            .address.uri = "mqtt://192.168.1.115:1883",
+            .address.uri = "mqtt://192.168.0.110:1883",
         },
         // .credentials = {
         //     .username = "usuario",

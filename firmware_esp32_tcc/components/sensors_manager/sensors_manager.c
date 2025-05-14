@@ -11,6 +11,7 @@
 #include "adc_manager.h"
 #include "ds18x20.h"
 #include "mqtt_service.h"
+#include "device_info.h"
 
 const static char *TAG = "sensors_manager";
 
@@ -59,6 +60,8 @@ static void disable_sensor(sensor_type_t sensor_type) {
 }
 
 static void sensors_manager_task(void *parm) {
+    // Device id
+    const char *device_id_str;
     // Sensors variables
     int turbidity;
     float temperature;
@@ -68,6 +71,9 @@ static void sensors_manager_task(void *parm) {
     char strftime_buf[64];
     // Buffer for mqtt messages
     char message[128];
+
+    // Get device id
+    device_id_str = device_info_get_id();
 
     // Set timezone to Brazil (Recife)
     setenv("TZ", "<-03>3", 1);
@@ -98,10 +104,10 @@ static void sensors_manager_task(void *parm) {
 
             strftime(strftime_buf, sizeof(strftime_buf), "%Y-%m-%dT%H:%M:%S%z", &timeinfo);
     
-            snprintf(message, sizeof(message), "{\"timestamp\": \"%s\", \"turbidity\": %d}", strftime_buf, turbidity);
+            snprintf(message, sizeof(message), "{\"id\": \"%s\", \"timestamp\": \"%s\", \"turbidity\": %d}", device_id_str, strftime_buf, turbidity);
             mqtt_publish("sensor/turbidity", message);
     
-            snprintf(message, sizeof(message), "{\"timestamp\": \"%s\", \"temperature\": %.2f}", strftime_buf, temperature);
+            snprintf(message, sizeof(message), "{\"id\": \"%s\",\"timestamp\": \"%s\", \"temperature\": %.2f}", device_id_str, strftime_buf, temperature);
             mqtt_publish("sensor/temperature", message);
     
             ESP_LOGI(TAG, "Turbidity = %d", turbidity);
