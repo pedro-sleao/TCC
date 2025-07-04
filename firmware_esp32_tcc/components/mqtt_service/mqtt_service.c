@@ -99,3 +99,8 @@ EventBits_t mqtt_event_get_bits(void)
 {
     return xEventGroupGetBits(mqtt_event_group);
 }
+
+void mqtt_event_clear_bits(void)
+{
+    xEventGroupClearBits(mqtt_event_group, MQTT_OTA_EVENT);
+}

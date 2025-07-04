@@ -63,7 +63,8 @@ static void sensors_manager_task(void *parm) {
     // Device id
     const char *device_id_str;
     // Sensors variables
-    int turbidity;
+    int turbidity_adc_value, turbidity;
+    //float tds;
     float temperature;
     // Time variables
     time_t now;
@@ -92,9 +93,10 @@ static void sensors_manager_task(void *parm) {
         time(&now);
         localtime_r(&now, &timeinfo);
         if (timeinfo.tm_sec % 10 == 0) {
+            // Read sensors
             adc_init();
             enable_sensor(TURBIDITY_SENSOR);
-            read_adc_value(TURBIDITY_SENSOR, &turbidity);
+            read_adc_value(TURBIDITY_SENSOR, &turbidity_adc_value);
             disable_sensor(TURBIDITY_SENSOR);
             adc_deinit();
     
@@ -102,8 +104,10 @@ static void sensors_manager_task(void *parm) {
             ds18b20_measure_and_read(GPIO_NUM_4, TEMPERATURE_SENSOR_ADDR, &temperature);
             disable_sensor(TEMPERATURE_SENSOR);
 
+            // Prepare message to mqtt
+            turbidity = (1 - turbidity_adc_value/(float) TURBIDITY_MAX) * 100;
             strftime(strftime_buf, sizeof(strftime_buf), "%Y-%m-%dT%H:%M:%S%z", &timeinfo);
-    
+
             snprintf(message, sizeof(message), "{\"id\": \"%s\", \"timestamp\": \"%s\", \"turbidity\": %d}", device_id_str, strftime_buf, turbidity);
             mqtt_publish("sensor/turbidity", message);
     
@@ -111,9 +115,10 @@ static void sensors_manager_task(void *parm) {
             mqtt_publish("sensor/temperature", message);
     
             ESP_LOGI(TAG, "Turbidity = %d", turbidity);
+            //ESP_LOGI(TAG, "Turbidity = %.2f", tds);
             ESP_LOGI(TAG, "Temperature = %.2f", temperature);
             ESP_LOGI(TAG, "The current date/time in Recife is: %s", strftime_buf);
-            vTaskDelay(pdMS_TO_TICKS(10000));
+            vTaskDelay(pdMS_TO_TICKS(1000));
         } else {
             vTaskDelay(pdMS_TO_TICKS(1000));
         }

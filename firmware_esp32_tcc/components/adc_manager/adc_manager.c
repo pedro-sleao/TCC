@@ -47,7 +47,16 @@ void adc_deinit(void) {
 void read_adc_value(sensor_type_t sensor_type, int *sensor) {
     ESP_LOGI(TAG, "Starting to read the channel %d...", sensor_adc_channels[sensor_type]);
 
+    vTaskDelay(pdMS_TO_TICKS(500));
     adc_oneshot_read(adc1_handle, sensor_adc_channels[sensor_type], sensor);
 }
 
+void read_adc_voltage(sensor_type_t sensor_type, float *sensor) {
+    int adc_value;
+    ESP_LOGI(TAG, "Starting to read the channel %d...", sensor_adc_channels[sensor_type]);
+
+    adc_oneshot_read(adc1_handle, sensor_adc_channels[sensor_type], &adc_value);
+
+    *sensor = adc_value * V_MAX / D_MAX;
+}
 
