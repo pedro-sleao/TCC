@@ -7,6 +7,6 @@ typedef enum {
     TURBIDITY_SENSOR
 } sensor_type_t;
 
-#define TURBIDITY_MAX 2034
+#define TURBIDITY_MAX 2300
 
 void init_sensors_task(void);

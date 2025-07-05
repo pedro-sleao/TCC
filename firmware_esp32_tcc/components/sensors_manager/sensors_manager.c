@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include <time.h>
+#include <math.h>
 #include <sys/time.h>
 #include "esp_sntp.h"
 
@@ -64,7 +65,7 @@ static void sensors_manager_task(void *parm) {
     const char *device_id_str;
     // Sensors variables
     int turbidity_adc_value, turbidity;
-    //float tds;
+    float tds;
     float temperature;
     // Time variables
     time_t now;
@@ -96,8 +97,12 @@ static void sensors_manager_task(void *parm) {
             // Read sensors
             adc_init();
             enable_sensor(TURBIDITY_SENSOR);
-            read_adc_value(TURBIDITY_SENSOR, &turbidity_adc_value);
+            get_adc_avarage(TURBIDITY_SENSOR, &turbidity_adc_value, 10);
             disable_sensor(TURBIDITY_SENSOR);
+
+            enable_sensor(TDS_SENSOR);
+            read_adc_voltage(TDS_SENSOR, &tds);
+            disable_sensor(TDS_SENSOR);
             adc_deinit();
     
             enable_sensor(TEMPERATURE_SENSOR);
@@ -105,17 +110,22 @@ static void sensors_manager_task(void *parm) {
             disable_sensor(TEMPERATURE_SENSOR);
 
             // Prepare message to mqtt
-            turbidity = (1 - turbidity_adc_value/(float) TURBIDITY_MAX) * 100;
+            turbidity = fmaxf(0.0f, (1 - turbidity_adc_value/(float) TURBIDITY_MAX) * 100);
+            
+
             strftime(strftime_buf, sizeof(strftime_buf), "%Y-%m-%dT%H:%M:%S%z", &timeinfo);
 
             snprintf(message, sizeof(message), "{\"id\": \"%s\", \"timestamp\": \"%s\", \"turbidity\": %d}", device_id_str, strftime_buf, turbidity);
             mqtt_publish("sensor/turbidity", message);
+
+            snprintf(message, sizeof(message), "{\"id\": \"%s\", \"timestamp\": \"%s\", \"tds\": %.2f}", device_id_str, strftime_buf, tds);
+            mqtt_publish("sensor/tds", message);
     
             snprintf(message, sizeof(message), "{\"id\": \"%s\",\"timestamp\": \"%s\", \"temperature\": %.2f}", device_id_str, strftime_buf, temperature);
             mqtt_publish("sensor/temperature", message);
     
             ESP_LOGI(TAG, "Turbidity = %d", turbidity);
-            //ESP_LOGI(TAG, "Turbidity = %.2f", tds);
+            ESP_LOGI(TAG, "Tds = %.2f", tds);
             ESP_LOGI(TAG, "Temperature = %.2f", temperature);
             ESP_LOGI(TAG, "The current date/time in Recife is: %s", strftime_buf);
             vTaskDelay(pdMS_TO_TICKS(1000));

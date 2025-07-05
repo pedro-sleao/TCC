@@ -18,6 +18,7 @@
         "esp_event.h": "c",
         "adc_cali_scheme.h": "c",
         "adc_cali.h": "c",
-        "sensors_manager.h": "c"
+        "sensors_manager.h": "c",
+        "adc_oneshot.h": "c"
     }
 }
