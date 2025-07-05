@@ -65,7 +65,7 @@ static void sensors_manager_task(void *parm) {
     const char *device_id_str;
     // Sensors variables
     int turbidity_adc_value, turbidity;
-    float tds;
+    float tds_voltage, tds, compensationCoefficient, compensationVoltage;
     float temperature;
     // Time variables
     time_t now;
@@ -101,7 +101,7 @@ static void sensors_manager_task(void *parm) {
             disable_sensor(TURBIDITY_SENSOR);
 
             enable_sensor(TDS_SENSOR);
-            read_adc_voltage(TDS_SENSOR, &tds);
+            get_adc_avarage_voltage(TDS_SENSOR, &tds_voltage, 10);
             disable_sensor(TDS_SENSOR);
             adc_deinit();
     
@@ -111,8 +111,10 @@ static void sensors_manager_task(void *parm) {
 
             // Prepare message to mqtt
             turbidity = fmaxf(0.0f, (1 - turbidity_adc_value/(float) TURBIDITY_MAX) * 100);
+            compensationCoefficient = 1.0+0.02*(temperature-25.0);    //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
+            compensationVoltage = tds_voltage/compensationCoefficient;
+            tds = (133.42*compensationVoltage*compensationVoltage*compensationVoltage - 255.86*compensationVoltage*compensationVoltage + 857.39*compensationVoltage)*0.5;
             
-
             strftime(strftime_buf, sizeof(strftime_buf), "%Y-%m-%dT%H:%M:%S%z", &timeinfo);
 
             snprintf(message, sizeof(message), "{\"id\": \"%s\", \"timestamp\": \"%s\", \"turbidity\": %d}", device_id_str, strftime_buf, turbidity);

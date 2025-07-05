@@ -18,3 +18,4 @@ void adc_deinit(void);
 void read_adc_value(sensor_type_t sensor_type, int *sensor);
 void read_adc_voltage(sensor_type_t sensor_type, float *sensor);
 void get_adc_avarage(sensor_type_t sensor_type, int *sensor, int n);
+void get_adc_avarage_voltage(sensor_type_t sensor_type, float *sensor, int n);

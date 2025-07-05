@@ -122,3 +122,26 @@ void get_adc_avarage(sensor_type_t sensor_type, int *sensor, int n) {
     *sensor = adc_value/n;
 }
 
+void get_adc_avarage_voltage(sensor_type_t sensor_type, float *sensor, int n) {
+    ESP_LOGI(TAG, "Starting to read the channel %d...", sensor_adc_channels[sensor_type]);
+
+    int voltage_value = 0;
+    float sum = 0;
+    int temp = 0;
+
+    adc_calibration_init(ADC_UNIT_1, sensor_adc_map[sensor_type].channel, ADC_ATTEN_DB_12, &sensor_adc_map[sensor_type].cali_handle);
+
+    for (int i = 0; i < n; i++) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+        adc_oneshot_read(adc1_handle, sensor_adc_channels[sensor_type], &temp);
+        adc_cali_raw_to_voltage(sensor_adc_map[sensor_type].cali_handle, temp, &voltage_value);
+        sum += voltage_value/(float)1000;
+    }
+
+    adc_calibration_deinit(sensor_adc_map[sensor_type].cali_handle);
+
+    *sensor = sum/n;
+}
+
+
+
