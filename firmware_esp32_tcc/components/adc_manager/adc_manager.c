@@ -74,7 +74,6 @@ void adc_init(void) {
     for (int i = 0; i < SENSOR_LENGTH; i++) {
         sensor_adc_map[i].channel = sensor_adc_channels[i];
         ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, sensor_adc_channels[i], &config));
-        adc_calibration_init(ADC_UNIT_1, sensor_adc_map[i].channel, ADC_ATTEN_DB_12, &sensor_adc_map[i].cali_handle);
         ESP_LOGI(TAG, "Channel %d successfully configured!", sensor_adc_channels[i]);
     }
 }
@@ -82,10 +81,6 @@ void adc_init(void) {
 void adc_deinit(void) {
     ESP_LOGI(TAG, "Deinitializing ADC1...");
     ESP_ERROR_CHECK(adc_oneshot_del_unit(adc1_handle));
-    
-    for (int i = 0; i < SENSOR_LENGTH; i++) {
-        adc_calibration_deinit(sensor_adc_map[i].cali_handle);
-    }
 }
 
 void read_adc_value(sensor_type_t sensor_type, int *sensor) {
@@ -100,10 +95,14 @@ void read_adc_voltage(sensor_type_t sensor_type, float *sensor) {
     int temp;
     ESP_LOGI(TAG, "Starting to read the channel %d...", sensor_adc_channels[sensor_type]);
 
+    adc_calibration_init(ADC_UNIT_1, sensor_adc_map[sensor_type].channel, ADC_ATTEN_DB_12, &sensor_adc_map[sensor_type].cali_handle);
+
     vTaskDelay(pdMS_TO_TICKS(500));
     adc_oneshot_read(adc1_handle, sensor_adc_channels[sensor_type], &adc_value);
 
     adc_cali_raw_to_voltage(sensor_adc_map[sensor_type].cali_handle, adc_value, &temp);
+
+    adc_calibration_deinit(sensor_adc_map[sensor_type].cali_handle);
 
     *sensor = temp/(float)1000;
 }
