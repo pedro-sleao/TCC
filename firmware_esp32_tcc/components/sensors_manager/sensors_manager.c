@@ -72,6 +72,7 @@ static void sensors_manager_task(void *parm) {
     struct tm timeinfo;
     char strftime_buf[64];
     // Buffer for mqtt messages
+    char topic[64];
     char message[128];
 
     // Get device id
@@ -116,15 +117,18 @@ static void sensors_manager_task(void *parm) {
             tds = (133.42*compensationVoltage*compensationVoltage*compensationVoltage - 255.86*compensationVoltage*compensationVoltage + 857.39*compensationVoltage)*0.5;
             
             strftime(strftime_buf, sizeof(strftime_buf), "%Y-%m-%dT%H:%M:%S%z", &timeinfo);
-
-            snprintf(message, sizeof(message), "{\"id\": \"%s\", \"timestamp\": \"%s\", \"turbidity\": %d}", device_id_str, strftime_buf, turbidity);
-            mqtt_publish("sensor/turbidity", message);
-
-            snprintf(message, sizeof(message), "{\"id\": \"%s\", \"timestamp\": \"%s\", \"tds\": %.2f}", device_id_str, strftime_buf, tds);
-            mqtt_publish("sensor/tds", message);
-    
-            snprintf(message, sizeof(message), "{\"id\": \"%s\",\"timestamp\": \"%s\", \"temperature\": %.2f}", device_id_str, strftime_buf, temperature);
-            mqtt_publish("sensor/temperature", message);
+            
+            snprintf(topic, sizeof(topic), "sensors/%s/turbidity", device_id_str);
+            snprintf(message, sizeof(message), "{\"timestamp\": \"%s\", \"turbidity\": %d}", strftime_buf, turbidity);
+            mqtt_publish(topic, message);
+            
+            snprintf(topic, sizeof(topic), "sensors/%s/tds", device_id_str);
+            snprintf(message, sizeof(message), "{\"timestamp\": \"%s\", \"tds\": %.2f}", strftime_buf, tds);
+            mqtt_publish(topic, message);
+            
+            snprintf(topic, sizeof(topic), "sensors/%s/temperature", device_id_str);
+            snprintf(message, sizeof(message), "{\"timestamp\": \"%s\", \"temperature\": %.2f}", strftime_buf, temperature);
+            mqtt_publish(topic, message);
     
             ESP_LOGI(TAG, "Turbidity = %d", turbidity);
             ESP_LOGI(TAG, "Tds = %.2f", tds);

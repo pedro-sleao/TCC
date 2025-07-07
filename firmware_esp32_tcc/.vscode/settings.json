@@ -19,6 +19,8 @@
         "adc_cali_scheme.h": "c",
         "adc_cali.h": "c",
         "sensors_manager.h": "c",
-        "adc_oneshot.h": "c"
+        "adc_oneshot.h": "c",
+        "ds18x20.h": "c",
+        "device_info.h": "c"
     }
 }

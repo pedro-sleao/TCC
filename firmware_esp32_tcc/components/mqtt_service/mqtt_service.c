@@ -8,6 +8,7 @@
 #include "esp_wifi.h"
 
 #include "mqtt_service.h"
+#include "device_info.h"
 
 static const char *TAG = "mqtt";
 
@@ -15,19 +16,21 @@ static EventGroupHandle_t mqtt_event_group;
 static esp_mqtt_client_handle_t client;
 
 char ota_url[256];
+const char* device_id_str;
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32, base, event_id);
     esp_mqtt_event_handle_t event = event_data;
     esp_mqtt_client_handle_t client = event->client;
-    int msg_id;
+    static char mqtt_topic[64];
+    //int msg_id;
     switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-        msg_id = esp_mqtt_client_subscribe(client, "firmware_update", 0);
-        esp_mqtt_client_subscribe(client, "wifi", 0);
-        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+        snprintf(mqtt_topic, sizeof(mqtt_topic), "devices/%s/firmware_update", device_id_str);
+        esp_mqtt_client_subscribe(client, mqtt_topic, 0);
+        ESP_LOGI(TAG, "Subscribed to topic %s", mqtt_topic);
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
@@ -45,7 +48,8 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
         printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
         printf("DATA=%.*s\r\n", event->data_len, event->data);
-        if (strncmp(event->topic, "firmware_update", event->topic_len) == 0) {
+        printf("%s", mqtt_topic);
+        if (strncmp(event->topic, mqtt_topic, event->topic_len) == 0) {
             xEventGroupSetBits(mqtt_event_group, MQTT_OTA_EVENT);
             strncpy(ota_url, event->data, event->data_len);
         }
@@ -82,6 +86,8 @@ void mqtt_app_start(void)
         //     }
         // }
     };
+
+    device_id_str = device_info_get_id();
 
     mqtt_event_group = xEventGroupCreate();
 
