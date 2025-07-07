@@ -66,7 +66,9 @@ static void sensors_manager_task(void *parm) {
     // Sensors variables
     int turbidity_adc_value, turbidity;
     float tds_voltage, tds, compensationCoefficient, compensationVoltage;
+    float tds_correction_factor = 842 / (float) 930;
     float temperature;
+    float ph, ph_voltage, m, b;
     // Time variables
     time_t now;
     struct tm timeinfo;
@@ -94,7 +96,7 @@ static void sensors_manager_task(void *parm) {
     while (1) {
         time(&now);
         localtime_r(&now, &timeinfo);
-        if (timeinfo.tm_sec % 10 == 0) {
+        if (timeinfo.tm_sec % 1 == 0) {
             // Read sensors
             adc_init();
             enable_sensor(TURBIDITY_SENSOR);
@@ -104,6 +106,10 @@ static void sensors_manager_task(void *parm) {
             enable_sensor(TDS_SENSOR);
             get_adc_avarage_voltage(TDS_SENSOR, &tds_voltage, 10);
             disable_sensor(TDS_SENSOR);
+
+            enable_sensor(PH_SENSOR);
+            get_adc_avarage_voltage(PH_SENSOR, &ph_voltage, 10);
+            disable_sensor(PH_SENSOR);
             adc_deinit();
     
             enable_sensor(TEMPERATURE_SENSOR);
@@ -111,11 +117,19 @@ static void sensors_manager_task(void *parm) {
             disable_sensor(TEMPERATURE_SENSOR);
 
             // Prepare message to mqtt
+            // turbidity
             turbidity = fmaxf(0.0f, (1 - turbidity_adc_value/(float) TURBIDITY_MAX) * 100);
+
+            // tds
             compensationCoefficient = 1.0+0.02*(temperature-25.0);    //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
             compensationVoltage = tds_voltage/compensationCoefficient;
-            tds = (133.42*compensationVoltage*compensationVoltage*compensationVoltage - 255.86*compensationVoltage*compensationVoltage + 857.39*compensationVoltage)*0.5;
+            tds = fmaxf(0.0f, tds_correction_factor*(133.42*compensationVoltage*compensationVoltage*compensationVoltage - 255.86*compensationVoltage*compensationVoltage + 857.39*compensationVoltage)*0.5 - 59);
             
+            // pH
+            // m = (9.18 - 6.86)/(CALIBRACAO_PH6_86 - CALIBRACAO_PH_9_18);
+            // b = 9.18 - m*CALIBRACAO_PH6_86;
+            ph = -8.85*ph_voltage + 22.2;
+
             strftime(strftime_buf, sizeof(strftime_buf), "%Y-%m-%dT%H:%M:%S%z", &timeinfo);
             
             snprintf(topic, sizeof(topic), "sensors/%s/turbidity", device_id_str);
@@ -129,10 +143,15 @@ static void sensors_manager_task(void *parm) {
             snprintf(topic, sizeof(topic), "sensors/%s/temperature", device_id_str);
             snprintf(message, sizeof(message), "{\"timestamp\": \"%s\", \"temperature\": %.2f}", strftime_buf, temperature);
             mqtt_publish(topic, message);
+
+            snprintf(topic, sizeof(topic), "sensors/%s/ph", device_id_str);
+            snprintf(message, sizeof(message), "{\"timestamp\": \"%s\", \"ph\": %.2f}", strftime_buf, ph);
+            mqtt_publish(topic, message);
     
-            ESP_LOGI(TAG, "Turbidity = %d", turbidity);
-            ESP_LOGI(TAG, "Tds = %.2f", tds);
-            ESP_LOGI(TAG, "Temperature = %.2f", temperature);
+            // ESP_LOGI(TAG, "Turbidity = %d", turbidity);
+            // ESP_LOGI(TAG, "Tds = %.2f", tds);
+            // ESP_LOGI(TAG, "Temperature = %.2f", temperature);
+            ESP_LOGI(TAG, "pH = %.4f", ph);
             ESP_LOGI(TAG, "The current date/time in Recife is: %s", strftime_buf);
             vTaskDelay(pdMS_TO_TICKS(1000));
         } else {
