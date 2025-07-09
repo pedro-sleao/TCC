@@ -150,7 +150,7 @@ static void sensors_manager_task(void *parm) {
     
             // ESP_LOGI(TAG, "Turbidity = %d", turbidity);
             // ESP_LOGI(TAG, "Tds = %.2f", tds);
-            // ESP_LOGI(TAG, "Temperature = %.2f", temperature);
+            ESP_LOGI(TAG, "Temperature = %.2f", temperature);
             ESP_LOGI(TAG, "pH = %.4f", ph);
             ESP_LOGI(TAG, "The current date/time in Recife is: %s", strftime_buf);
             vTaskDelay(pdMS_TO_TICKS(1000));

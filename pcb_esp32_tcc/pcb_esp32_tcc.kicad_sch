@@ -1976,6 +1976,12 @@
 		(uuid "673d438b-3262-4263-9d72-cdfdb8760cb7")
 	)
 	(junction
+		(at 81.28 105.41)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "98a07ad3-c40d-4a73-8685-8f899eda019f")
+	)
+	(junction
 		(at 238.76 134.62)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2075,6 +2081,26 @@
 	)
 	(wire
 		(pts
+			(xy 72.39 105.41) (xy 81.28 105.41)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3593eb14-5bfa-41da-8a38-687daf17c6e9")
+	)
+	(wire
+		(pts
+			(xy 81.28 105.41) (xy 81.28 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3643ee48-1d11-44a8-88f0-eab418da00c5")
+	)
+	(wire
+		(pts
 			(xy 250.19 129.54) (xy 250.19 132.08)
 		)
 		(stroke
@@ -2135,7 +2161,7 @@
 	)
 	(wire
 		(pts
-			(xy 81.28 104.14) (xy 81.28 106.68)
+			(xy 81.28 104.14) (xy 81.28 105.41)
 		)
 		(stroke
 			(width 0)
@@ -2562,6 +2588,71 @@
 			(justify right bottom)
 		)
 		(uuid "d722930e-bebd-4e09-8fbd-689ae07f0579")
+	)
+	(symbol
+		(lib_id "Connector:Conn_01x01_Pin")
+		(at 67.31 105.41 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "0b93b39c-1ea5-4d5e-9365-c01fc79c792c")
+		(property "Reference" "J7"
+			(at 67.945 100.33 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "Conn_01x01_Pin"
+			(at 67.945 102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
+			(at 67.31 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 67.31 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x01, script generated"
+			(at 67.31 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "100f6857-e9c9-4311-9704-ce60a1ec35fd")
+		)
+		(instances
+			(project "pcb_esp32_tcc"
+				(path "/99d18d59-4c06-40b2-add7-d919244a681a"
+					(reference "J7")
+					(unit 1)
+				)
+			)
+		)
 	)
 	(symbol
 		(lib_id "Device:R_US")
