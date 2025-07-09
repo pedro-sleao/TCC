@@ -22,10 +22,10 @@ Este projeto visa desenvolver um sistema embarcado com conectividade Wi-Fi para 
 
 ### PCB
 
-- [ ] Definir se os sensores serão alimentados diretamente pela ESP32 ou por uma fonte externa
-- [ ] Decidir o que será utilizado para adaptar a saída do sensor de PH (0 - 5V) para a entrada do ADC da ESP (0 - 3.3V)
-- [ ] Finalizar o esquemático com todos os componentes
-- [ ] Layout da Placa
+- [x] Definir se os sensores serão alimentados diretamente pela ESP32 ou por uma fonte externa -> sensor de pH pelos 5V do módulo da bateria e os outros sensores pela esp
+- [x] Decidir o que será utilizado para adaptar a saída do sensor de PH (0 - 5V) para a entrada do ADC da ESP (0 - 3.3V) -> divisor de tensão
+- [x] Finalizar o esquemático com todos os componentes
+- [x] Layout da Placa
 
 ### Front-end
 
