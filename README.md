@@ -9,6 +9,14 @@ Este projeto visa desenvolver um sistema embarcado com conectividade Wi-Fi para 
 - **Sensor de TDS**
 - **Sensor de turbidez**
 
+- ## Pins
+ 
+| DS18B20 |  ESP32
+| --------| ---------------
+| VCC     |  GPIO16
+| GND     |  GND
+| 1-Wire bus |  GPIO4
+
 ## Status do projeto
 
 ### Firmware
