@@ -21,7 +21,7 @@ Este projeto visa desenvolver um sistema embarcado com conectividade Wi-Fi para 
 | --------| ---------------
 | VCC     |  Bateria 5V
 | GND     |  Chave controlada pela ESP (GPIO18)
-| P0      |  ADC1_CHANNEL_4
+| P0      |  ADC1_CHANNEL_4 (Com divisor de tensão)
 
 | TDS |  ESP32
 | --------| ---------------
