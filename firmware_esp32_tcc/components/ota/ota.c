@@ -63,7 +63,7 @@ static void ota_task(void *pvParameter)
                 esp_restart();
             } else {
                 ESP_LOGE(TAG, "Firmware upgrade failed");
-                mqtt_event_clear_bits();
+                mqtt_event_clear_bits(MQTT_OTA_EVENT);
             }
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);

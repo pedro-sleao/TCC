@@ -47,6 +47,7 @@ static void sensors_manager_task(void *parm) {
     time_t now;
     struct tm timeinfo;
     char strftime_buf[64];
+    int last_measure_time = -1;
     // Buffer for mqtt messages
     char topic[64];
     char message[128];
@@ -66,10 +67,12 @@ static void sensors_manager_task(void *parm) {
         ESP_LOGI(TAG, "GPIO %d successfully configured!", sensor_pins[i]);
     }
 
+    // Event bits to check mqtt event
+    EventBits_t uxBits;
     while (1) {
-        time(&now);
-        localtime_r(&now, &timeinfo);
-        if (timeinfo.tm_sec % 1 == 0) {
+        time_sync_get_localtime(&now, &timeinfo);
+        uxBits = mqtt_event_get_bits();
+        if (((timeinfo.tm_hour % 3 == 0) && (timeinfo.tm_hour != last_measure_time)) || (uxBits & MQTT_SEND_DATA_EVENT)) {
             // Read sensors
             adc_init();
             enable_sensor(TURBIDITY_SENSOR);
@@ -102,7 +105,8 @@ static void sensors_manager_task(void *parm) {
             // m = (9.18 - 6.86)/(CALIBRACAO_PH6_86 - CALIBRACAO_PH_9_18);
             // b = 9.18 - m*CALIBRACAO_PH6_86;
             ph = -8.85*ph_voltage + 22.2;
-
+            
+            // Format time
             strftime(strftime_buf, sizeof(strftime_buf), "%Y-%m-%dT%H:%M:%S%z", &timeinfo);
             
             snprintf(topic, sizeof(topic), "sensors/%s/turbidity", device_id_str);
@@ -126,6 +130,9 @@ static void sensors_manager_task(void *parm) {
             ESP_LOGI(TAG, "Temperature = %.2f", temperature);
             ESP_LOGI(TAG, "pH = %.4f", ph);
             ESP_LOGI(TAG, "The current date/time in Recife is: %s", strftime_buf);
+
+            last_measure_time = timeinfo.tm_hour;
+            mqtt_event_clear_bits(MQTT_SEND_DATA_EVENT);
             vTaskDelay(pdMS_TO_TICKS(1000));
         } else {
             vTaskDelay(pdMS_TO_TICKS(1000));

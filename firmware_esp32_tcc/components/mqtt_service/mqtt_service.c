@@ -26,15 +26,22 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     esp_mqtt_event_handle_t event = event_data;
     esp_mqtt_client_handle_t client = event->client;
     static char firmware_update_topic[64];
+    static char send_data_topic[64];
     //int msg_id;
     switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
         esp_mqtt_client_publish(client, status_topic, "online", 0, 1, 0);
         ESP_LOGI(TAG, "Published LWT status to topic='%s'", status_topic);
+
+        snprintf(send_data_topic, sizeof(send_data_topic), "devices/%s/send_data", device_id_str);
+        esp_mqtt_client_subscribe(client, send_data_topic, 0);
+        ESP_LOGI(TAG, "Subscribed to topic %s", send_data_topic);
+
         snprintf(firmware_update_topic, sizeof(firmware_update_topic), "devices/%s/firmware_update", device_id_str);
         esp_mqtt_client_subscribe(client, firmware_update_topic, 0);
         ESP_LOGI(TAG, "Subscribed to topic %s", firmware_update_topic);
+
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
@@ -52,10 +59,13 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
         printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
         printf("DATA=%.*s\r\n", event->data_len, event->data);
-        printf("%s", firmware_update_topic);
         if (strncmp(event->topic, firmware_update_topic, event->topic_len) == 0) {
             xEventGroupSetBits(mqtt_event_group, MQTT_OTA_EVENT);
             strncpy(ota_url, event->data, event->data_len);
+        }
+
+        if (strncmp(event->topic, send_data_topic, event->topic_len) == 0) {
+            xEventGroupSetBits(mqtt_event_group, MQTT_SEND_DATA_EVENT);
         }
         break;
     case MQTT_EVENT_ERROR:
@@ -120,7 +130,7 @@ EventBits_t mqtt_event_get_bits(void)
     return xEventGroupGetBits(mqtt_event_group);
 }
 
-void mqtt_event_clear_bits(void)
+void mqtt_event_clear_bits(EventBits_t bit)
 {
-    xEventGroupClearBits(mqtt_event_group, MQTT_OTA_EVENT);
+    xEventGroupClearBits(mqtt_event_group, bit);
 }
