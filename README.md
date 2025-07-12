@@ -9,6 +9,32 @@ Este projeto visa desenvolver um sistema embarcado com conectividade Wi-Fi para 
 - **Sensor de TDS**
 - **Sensor de turbidez**
 
+## Pinagem
+ 
+| DS18B20 |  ESP32
+| --------| ---------------
+| VCC     |  GPIO16
+| GND     |  GND
+| 1-Wire bus |  GPIO4
+
+| Ph4502c |  ESP32
+| --------| ---------------
+| VCC     |  Bateria 5V
+| GND     |  Chave controlada pela ESP (GPIO18)
+| P0      |  ADC1_CHANNEL_4 (Com divisor de tensão)
+
+| TDS |  ESP32
+| --------| ---------------
+| VCC     |  GPIO17
+| GND     |  GND
+| P0      |  ADC1_CHANNEL_3
+
+| Turbidez |  ESP32
+| --------| ---------------
+| VCC     |  GPIO19
+| GND     |  GND
+| P0      |  ADC1_CHANNEL_5
+
 ## Status do projeto
 
 ### Firmware
