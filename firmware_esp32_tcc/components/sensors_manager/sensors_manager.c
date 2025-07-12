@@ -13,6 +13,7 @@
 #include "ds18x20.h"
 #include "mqtt_service.h"
 #include "device_info.h"
+#include "time_sync.h"
 
 const static char *TAG = "sensors_manager";
 
@@ -24,33 +25,6 @@ static const gpio_num_t sensor_pins[] = {
 };
 
 static const onewire_addr_t TEMPERATURE_SENSOR_ADDR = 0x5e00000000f59728;
-
-static void initialize_sntp(void)
-{
-    ESP_LOGI(TAG, "Initializing SNTP");
-    esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
-    esp_sntp_setservername(0, "pool.ntp.org");
-    esp_sntp_init();
-}
-
-static void obtain_time(void)
-{
-    initialize_sntp();
-
-    time_t now = 0;
-    struct tm timeinfo = { 0 };
-    int retry = 0;
-    const int retry_count = 10;
-
-    while (timeinfo.tm_year < (2024 - 1900) && ++retry < retry_count) {
-        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
-        vTaskDelay(pdMS_TO_TICKS(2000));
-        time(&now);
-        localtime_r(&now, &timeinfo);
-    }
-
-    esp_sntp_stop();
-}
 
 static void enable_sensor(sensor_type_t sensor_type) {
     gpio_set_level(sensor_pins[sensor_type], 1);
@@ -81,12 +55,11 @@ static void sensors_manager_task(void *parm) {
     device_id_str = device_info_get_id();
 
     // Set timezone to Brazil (Recife)
-    setenv("TZ", "<-03>3", 1);
-    tzset();
+    time_sync_set_timezone("<-03>3");
+
     // RTC config
     obtain_time();
-    time(&now);
-    localtime_r(&now, &timeinfo);
+    time_sync_get_localtime(&now, &timeinfo);
 
     for (int i = 0; i < sizeof(sensor_pins) / sizeof(sensor_pins[0]); i++) {
         gpio_set_direction(sensor_pins[i], GPIO_MODE_OUTPUT);
@@ -148,8 +121,8 @@ static void sensors_manager_task(void *parm) {
             snprintf(message, sizeof(message), "{\"timestamp\": \"%s\", \"ph\": %.2f}", strftime_buf, ph);
             mqtt_publish(topic, message);
     
-            // ESP_LOGI(TAG, "Turbidity = %d", turbidity);
-            // ESP_LOGI(TAG, "Tds = %.2f", tds);
+            ESP_LOGI(TAG, "Turbidity = %d", turbidity);
+            ESP_LOGI(TAG, "Tds = %.2f", tds);
             ESP_LOGI(TAG, "Temperature = %.2f", temperature);
             ESP_LOGI(TAG, "pH = %.4f", ph);
             ESP_LOGI(TAG, "The current date/time in Recife is: %s", strftime_buf);
