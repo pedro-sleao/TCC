@@ -23,11 +23,13 @@ def handle_mqtt_message(client, userdata, message):
 
     if "devices" in topic:
         handle_devices(topic, payload)
-    
+    else:
+        handle_sensors(topic, payload)
+
 
 def handle_devices(topic, payload):
     with mqtt_client.app.app_context():
-        id_placa = topic.split('/')[1]
+        device_id = topic.split('/')[1]
 
         status_str = str(payload).strip()
 
@@ -36,15 +38,40 @@ def handle_devices(topic, payload):
         else:
             status = False
             
-        placa = Placas.query.filter_by(id_placa=id_placa).first()
+        device = Placas.query.filter_by(id_placa=device_id).first()
 
-        print(placa, status)
-        if placa:
+        if device:
             # Se a placa existe, atualiza o status
-            placa.status = status
+            device.status = status
         else:
             # Se não existe, cria uma nova placa
-            placa = Placas(id_placa=id_placa, status=status)
+            device = Placas(id_placa=device_id, status=status)
         
-        db.session.add(placa)
+        db.session.add(device)
+        db.session.commit()
+
+def handle_sensors(topic, payload):
+    with mqtt_client.app.app_context():
+        topic_split = topic.split('/')
+        device_id = topic_split[1]
+        sensor_type = topic_split[2]
+
+        payload_json = json.loads(payload)
+        sensor_value = payload_json[sensor_type]
+        timestamp = payload_json["timestamp"]
+
+        sensor = Sensores.query.filter_by(id_placa=device_id, data=timestamp).first()
+
+        if sensor:
+            setattr(sensor, sensor_type, sensor_value)
+            print(f"[INFO] Atualizando sensores: {device_id} - {timestamp}")
+        else:
+            sensor = Sensores(
+                id_placa=device_id,
+                data=timestamp,
+                **{sensor_type: sensor_value}
+            )
+            db.session.add(sensor)
+            print(f"[INFO] Criando uma nova medicao: {device_id} - {timestamp}")
+
         db.session.commit()

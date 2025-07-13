@@ -9,27 +9,10 @@ from statistics import mean
 
 from . import api_bp
 from .models import Sensores, Placas, Users
-from .schemas import SensoresGETSchema, SensoresPOSTSchema, PlacasSchema, UsersSchema, ArgsRequestsSchema
+from .schemas import SensoresGETSchema, PlacasSchema, UsersSchema, ArgsRequestsSchema
 from ..db import db
 from ..socketio.sockets import socketio
 from .helper import require_apikey
-
-
-@api_bp.route('/api/dados/id', methods=['GET'])
-@require_apikey
-def register_new_node():
-    last_row = (db.session.query(
-        Placas.id_placa,
-    ).order_by(Placas.id_placa.desc()).first())
-
-    id_placa = last_row.id_placa + 1 if last_row else 1
-
-    placas = Placas(id_placa=id_placa)
-
-    db.session.add(placas)
-    db.session.commit()
-
-    return str(id_placa)
 
 @api_bp.route('/api/dados/placas', methods=['GET', 'POST'])
 @jwt_required()
@@ -77,13 +60,10 @@ def get_nodes_data():
             return jsonify({'error': 'ID não encontrado no banco de dados'}), 400
 
         placa.local = validated_data.get('local')
-        placa.latitude = validated_data.get('latitude')
-        placa.longitude = validated_data.get('longitude')
-        placa.temperatura_do_solo = validated_data.get('temperatura_do_solo')
-        placa.temperatura_do_ar = validated_data.get('temperatura_do_ar')
-        placa.umidade_do_solo = validated_data.get('umidade_do_solo')
-        placa.umidade_do_ar = validated_data.get('umidade_do_ar')
-        placa.iluminacao = validated_data.get('iluminacao')
+        placa.temperature = validated_data.get('temperature')
+        placa.tds = validated_data.get('tds')
+        placa.turbidity = validated_data.get('turbidity')
+        placa.ph = validated_data.get('ph')
 
         db.session.commit()
 
@@ -117,64 +97,17 @@ def get_sensor_data():
     dados = (db.session.query(
         Sensores.id_placa,
         Placas.local,
-        Placas.latitude,
-        Placas.longitude,
-        db.func.array_agg(aggregate_order_by(Sensores.temperatura_do_solo, Sensores.data.asc())).label(
-            'temperatura_do_solo'),
-        db.func.array_agg(aggregate_order_by(Sensores.temperatura_do_ar, Sensores.data.asc())).label(
-            'temperatura_do_ar'),
-        db.func.array_agg(aggregate_order_by(Sensores.umidade_do_solo, Sensores.data.asc())).label('umidade_do_solo'),
-        db.func.array_agg(aggregate_order_by(Sensores.umidade_do_ar, Sensores.data.asc())).label('umidade_do_ar'),
-        db.func.array_agg(aggregate_order_by(Sensores.iluminacao, Sensores.data.asc())).label('iluminacao'),
+        db.func.array_agg(aggregate_order_by(Sensores.temperature, Sensores.data.asc())).label('temperature'),
+        db.func.array_agg(aggregate_order_by(Sensores.tds, Sensores.data.asc())).label('tds'),
+        db.func.array_agg(aggregate_order_by(Sensores.turbidity, Sensores.data.asc())).label('turbidity'),
+        db.func.array_agg(aggregate_order_by(Sensores.ph, Sensores.data.asc())).label('ph'),
         db.func.array_agg(aggregate_order_by(Sensores.data, Sensores.data.asc())).label('data'),
     ).join(Sensores, Sensores.id_placa == Placas.id_placa).filter(and_(*filters))
-     .group_by(Sensores.id_placa, Placas.local, Placas.latitude, Placas.longitude).all())
+     .group_by(Sensores.id_placa, Placas.local).all())
 
     dados_formatados = SensoresGETSchema(many=True).dump(dados)
 
     return jsonify(dados_formatados)
-
-@api_bp.route('/api/dados/sensores', methods=['POST'])
-@require_apikey
-def send_sensor_data():
-    columns = Sensores.__table__.columns.keys()
-
-    new_data = request.get_json()
-
-    try:
-        validated_data = SensoresPOSTSchema().load(new_data)
-    except marshmallow.exceptions.ValidationError as err:
-        return jsonify({'error': err.messages}), 400
-
-    id_placa = validated_data.get('id_placa')
-    temperatura_do_solo = validated_data.get('temperatura_do_solo')
-    temperatura_do_ar = validated_data.get('temperatura_do_ar')
-    umidade_do_solo = validated_data.get('umidade_do_solo')
-    umidade_do_ar = validated_data.get('umidade_do_ar')
-    iluminacao = validated_data.get('iluminacao')
-    data = validated_data.get('data')
-
-    # Verifica se as chaves da requisição existem
-    received_keys = set(new_data.keys())
-    invalid_keys = received_keys - set(columns)
-    if invalid_keys:
-        return jsonify({'error': f'Chave(s) inválida(s) detectada(s): {", ".join(invalid_keys)}'}), 400
-
-    # Verifica se a placa ja foi registrada
-    query_id_placa = Placas.query.filter_by(id_placa=id_placa).first()
-    if not query_id_placa:
-        return jsonify({'error': 'ID não encontrado no banco de dados'}), 401
-
-    # Adiciona os dados nas tabelas
-    sensores = Sensores(id_placa, temperatura_do_solo, temperatura_do_ar, umidade_do_solo, umidade_do_ar, iluminacao,
-                        data)
-    db.session.add(sensores)
-    db.session.commit()
-
-    # Avisa aos clientes que chegaram novos dados
-    socketio.emit('message', 'New data')
-
-    return jsonify({'message': 'Dados adicionados corretamente.'})
 
 @api_bp.route('/api/dados/local', methods=['GET'])
 @jwt_required()
@@ -201,18 +134,14 @@ def get_data_by_local():
 
     dados = (db.session.query(
         Placas.local,
-        Placas.latitude,
-        Placas.longitude,
-        db.func.array_agg(aggregate_order_by(Sensores.temperatura_do_solo, Sensores.data.asc())).label(
-            'temperatura_do_solo'),
-        db.func.array_agg(aggregate_order_by(Sensores.temperatura_do_ar, Sensores.data.asc())).label(
-            'temperatura_do_ar'),
-        db.func.array_agg(aggregate_order_by(Sensores.umidade_do_solo, Sensores.data.asc())).label('umidade_do_solo'),
-        db.func.array_agg(aggregate_order_by(Sensores.umidade_do_ar, Sensores.data.asc())).label('umidade_do_ar'),
-        db.func.array_agg(aggregate_order_by(Sensores.iluminacao, Sensores.data.asc())).label('iluminacao'),
+        db.func.array_agg(aggregate_order_by(Sensores.temperature, Sensores.data.asc())).label('temperature'),
+        db.func.array_agg(aggregate_order_by(Sensores.tds, Sensores.data.asc())).label(
+            'tds'),
+        db.func.array_agg(aggregate_order_by(Sensores.turbidity, Sensores.data.asc())).label('turbidity'),
+        db.func.array_agg(aggregate_order_by(Sensores.ph, Sensores.data.asc())).label('ph'),
         db.func.array_agg(aggregate_order_by(Sensores.data, Sensores.data.asc())).label('data'),
     ).join(Placas, Sensores.id_placa == Placas.id_placa).filter(and_(*filters))
-     .group_by(Placas.local, Placas.latitude, Placas.longitude).all())
+     .group_by(Placas.local).all())
 
     dados_formatados = SensoresGETSchema(many=True).dump(dados)
     metrics = {}
@@ -243,7 +172,7 @@ def get_data_by_local():
             min_values = []
             max_values = []
             for key, value in dados_formatados[0].copy().items():
-                if key != 'local' and key != 'latitude' and key != 'longitude' and key != 'data':
+                if key != 'local' and key != 'data':
                     for i in days_list:
                         for j in range(len(value)):
                             if i == dados_formatados[0]['data'][j].split('T')[0]:

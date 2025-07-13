@@ -3,29 +3,22 @@ import datetime
 from app import db
 
 class Sensores(db.Model):
-    __tablename__ = 'sensores'
+    __tablename__ = 'sensors'
     id = db.Column(db.Integer, primary_key=True)
     id_placa = db.Column(db.String(40))
-    temperatura = db.Column(db.Float)
-    turbidez = db.Column(db.Integer)
-    ph = db.Column(db.Float)
-    tds = db.Column(db.Float)
+    temperature = db.Column(db.Float, nullable=True)
+    turbidity = db.Column(db.Integer, nullable=True)
+    ph = db.Column(db.Float, nullable=True)
+    tds = db.Column(db.Float, nullable=True)
     data = db.Column(db.DateTime)
 
-    def __init__(self, id_placa, temperatura, turbidez, ph, tds, data):
-        self.id_placa = id_placa
-        self.temperatura = temperatura
-        self.turbidez = turbidez
-        self.ph = ph
-        self.tds = tds
-        self.data = data
 
 class Placas(db.Model):
-    __tablename__ = 'placas'
+    __tablename__ = 'devices'
     id_placa = db.Column(db.String(40), primary_key=True)
     local = db.Column(db.String(40))
-    tempratura = db.Column(db.Boolean)
-    turbidez = db.Column(db.Boolean)
+    temperature = db.Column(db.Boolean)
+    turbidity = db.Column(db.Boolean)
     ph = db.Column(db.Boolean)
     tds = db.Column(db.Boolean)
     status = db.Column(db.Boolean)
@@ -33,8 +26,8 @@ class Placas(db.Model):
     def __init__(self, id_placa, status):
         self.id_placa = id_placa
         self.local = None
-        self.temperatura = None
-        self.turbidez = None
+        self.temperature = None
+        self.turbidity = None
         self.ph = None
         self.tds = None
         self.status = status
