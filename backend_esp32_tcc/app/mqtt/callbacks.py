@@ -2,6 +2,7 @@ from . import mqtt_client
 from ..db import db
 from ..api.models import Sensores, Placas, Users
 from flask import current_app
+from ..socketio.sockets import socketio
 import json
 
 @mqtt_client.on_connect()
@@ -50,6 +51,8 @@ def handle_devices(topic, payload):
         db.session.add(device)
         db.session.commit()
 
+        socketio.emit('message', 'New data')
+        
 def handle_sensors(topic, payload):
     with mqtt_client.app.app_context():
         topic_split = topic.split('/')
@@ -75,3 +78,5 @@ def handle_sensors(topic, payload):
             print(f"[INFO] Criando uma nova medicao: {device_id} - {timestamp}")
 
         db.session.commit()
+
+        socketio.emit('message', 'New data')

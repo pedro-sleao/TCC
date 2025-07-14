@@ -53,10 +53,19 @@ Este projeto visa desenvolver um sistema embarcado com conectividade Wi-Fi para 
 - [x] Finalizar o esquemático com todos os componentes
 - [x] Layout da Placa
 
-### Front-end
-
-Desenvolvimento ainda não iniciado.
-
 ### Back-end
 
-Desenvolvimento ainda não iniciado.
+- [x] Receber os dados por MQTT
+- [x] Inserir os dados no banco de dados
+- [x] API para enviar os dados para o frontend
+- [x] Websocket para notificar a chegada de novos dados
+
+### Front-end
+
+- [x] Obter os dados da API
+- [x] Página principal do dashboard
+- [x] Página de registro das placas
+- [x] Página de cadastro de usuários
+- [ ] Página de calibração dos sensores
+
+
