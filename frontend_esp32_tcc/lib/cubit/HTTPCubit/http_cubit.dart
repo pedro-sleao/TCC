@@ -194,6 +194,21 @@ class HttpCubit extends Cubit<HttpState> {
     });
   }
 
+    /// Busca os dados das placas.
+  ///
+  /// Faz uma chamada ao método `fetchNodeData` do repositório e atualiza a lista de dados
+  /// das placas. Emite o estado [HttpDataLoaded] quando os dados dos locais são carregados com sucesso.
+  /// Lança uma exceção em caso de erro. Essa função é semelhante a
+  /// 'fetchNodeData', a diferença é que o estado de 'HttpLocalLoaded' não é emitido, fazendo com que a tela não recarregue.
+  Future<void> updateNodeData([String queryParameters = '']) async {
+    repository.fetchNodeData(queryParameters).then((value) {
+      nodeDataList = value;
+      emit(HttpDataLoaded());
+    }).catchError((e) {
+      emit(HttpError(errorMessage: e.toString()));
+    });
+  }
+
   /// Reseta o estado do cubit para o estado inicial.
   ///
   /// Emite o estado [HttpInitial] para reiniciar o estado do cubit.

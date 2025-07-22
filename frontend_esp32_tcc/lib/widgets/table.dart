@@ -31,6 +31,7 @@ class _TableWidgetState extends State<TableWidget> {
           rows.add(_createTableRow(
               data.idPlaca,
               data.localName,
+              data.firmwareVersion,
               data.checkStatus,
               data.checkTemp,
               data.checkTds,
@@ -67,6 +68,14 @@ class _TableWidgetState extends State<TableWidget> {
                     label: Expanded(
                       child: Text(
                         'Nome do Local',
+                        style: TextStyle(fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Expanded(
+                      child: Text(
+                        'Versão',
                         style: TextStyle(fontStyle: FontStyle.italic),
                       ),
                     ),
@@ -136,20 +145,22 @@ class _TableWidgetState extends State<TableWidget> {
 DataRow _createTableRow(
     String idPlaca,
     String? localName,
+    String? firmwareVersion,
+    bool? checkStatus,
     bool? checkTemp,
     bool? checkTds,
     bool? checkTurb,
-    bool? checkPh,
-    bool? checkStatus) {
+    bool? checkPh) {
   return DataRow(
     cells: <DataCell>[
       DataCell(SizedBox(width: 100, child: SelectableText(idPlaca))),
       DataCell(SizedBox(width: 100, child: SelectableText("$localName"))),
+      DataCell(SelectableText("$firmwareVersion")),
+      DataCell(checkStatus! ? Icon(Icons.circle, color: Colors.green) : Icon(Icons.circle, color: Colors.red)),
       DataCell(SelectableText("$checkTemp")),
       DataCell(SelectableText("$checkTds")),
       DataCell(SelectableText("$checkTurb")),
       DataCell(SelectableText("$checkPh")),
-      DataCell(SelectableText("$checkStatus")),
     ],
   );
 }

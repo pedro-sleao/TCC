@@ -31,8 +31,10 @@ def handle_mqtt_message(client, userdata, message):
 def handle_devices(topic, payload):
     with mqtt_client.app.app_context():
         device_id = topic.split('/')[1]
+        payload_json = json.loads(payload)
 
-        status_str = str(payload).strip()
+        status_str = payload_json["status"]
+        firmware_version = payload_json["firmware_version"]
 
         if status_str.isdigit():
             status = int(status_str) != 0
@@ -44,9 +46,10 @@ def handle_devices(topic, payload):
         if device:
             # Se a placa existe, atualiza o status
             device.status = status
+            device.firmware_version = firmware_version
         else:
             # Se não existe, cria uma nova placa
-            device = Placas(id_placa=device_id, status=status)
+            device = Placas(id_placa=device_id, status=status, firmware_version=firmware_version)
         
         db.session.add(device)
         db.session.commit()

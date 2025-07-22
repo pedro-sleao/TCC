@@ -18,6 +18,7 @@ class PlacasSchema(Schema):
     tds = fields.Bool()
     ph = fields.Bool()
     status = fields.Bool()
+    firmware_version = fields.Str()
 
 class UsersSchema(Schema):
     id = fields.Int(dump_only=True)

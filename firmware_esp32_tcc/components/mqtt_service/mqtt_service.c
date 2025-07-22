@@ -17,8 +17,9 @@ static esp_mqtt_client_handle_t client;
 
 char ota_url[256];
 char status_topic[64];
+char status_message[64];
 const char* device_id_str;
-
+const char* firmware_version;
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
@@ -31,7 +32,8 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-        esp_mqtt_client_publish(client, status_topic, "1", 0, 1, 0);
+        snprintf(status_message, sizeof(status_message), "{\"status\": \"1\", \"firmware_version\": \"%s\"}", firmware_version);
+        esp_mqtt_client_publish(client, status_topic, status_message, 0, 1, 0);
         ESP_LOGI(TAG, "Published LWT status to topic='%s'", status_topic);
 
         snprintf(send_data_topic, sizeof(send_data_topic), "devices/%s/send_data", device_id_str);
@@ -90,8 +92,10 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 void mqtt_app_start(void)
 {
     device_id_str = device_info_get_id();
-
+    firmware_version = get_firmware_version();
+    
     snprintf(status_topic, sizeof(status_topic), "devices/%s/status", device_id_str);
+    snprintf(status_message, sizeof(status_message), "{\"status\": \"0\", \"firmware_version\": \"%s\"}", firmware_version);
 
     const esp_mqtt_client_config_t mqtt_cfg = {
         .broker = {
@@ -100,7 +104,7 @@ void mqtt_app_start(void)
         .session = {
             .last_will = {
                 .topic = status_topic,
-                .msg = "0",
+                .msg = status_message,
                 .qos = 1,
                 .retain = 1
             }

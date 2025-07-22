@@ -22,15 +22,17 @@ class Placas(db.Model):
     ph = db.Column(db.Boolean)
     tds = db.Column(db.Boolean)
     status = db.Column(db.Boolean)
+    firmware_version = db.Column(db.String(40))
 
-    def __init__(self, id_placa, status):
+    def __init__(self, id_placa, status, firmware_version):
         self.id_placa = id_placa
-        self.local = None
+        self.local = ""
         self.temperature = None
         self.turbidity = None
         self.ph = None
         self.tds = None
         self.status = status
+        self.firmware_version = firmware_version
 
 class Users(db.Model):
     __tablename__ = 'usuarios'

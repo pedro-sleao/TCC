@@ -7,6 +7,7 @@ class PlacaData {
   final bool? checkTurb;
   final bool? checkPh;
   final bool? checkStatus;
+  final String? firmwareVersion;
 
   /// Cria uma instância de [PlacaData] a partir de um mapa JSON.
   ///
@@ -18,7 +19,8 @@ class PlacaData {
         checkTds = json['tds'],
         checkTurb = json['turbidity'],
         checkPh = json['ph'],
-        checkStatus = json['status'];
+        checkStatus = json['status'],
+        firmwareVersion = json['firmware_version'];
 }
 
 /// Analisa uma lista de mapas JSON e retorna uma lista de instâncias de [PlacaData].

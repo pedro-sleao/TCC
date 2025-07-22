@@ -25,7 +25,7 @@ class SocketCubit extends Cubit<SocketState> {
     socket!.on('message', (data) {
       String? local = httpCubit.selectedLocal;
       httpCubit.updateData(local!);
-      httpCubit.fetchNodeData();
+      httpCubit.updateNodeData();
     });
   }
 
