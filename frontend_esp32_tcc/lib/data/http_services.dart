@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dashboard_flutter/constants.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:file_picker/file_picker.dart';
 
 /// Serviço de HTTP para interações com a API.
 ///
@@ -254,6 +255,37 @@ class HttpService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
+        throw Exception("Erro na requisição ${response.statusCode}");
+      }
+    } catch (e) {
+      throw Exception("Erro na conexão com o servidor: ${e.toString()}");
+    }
+  }
+
+  Future<void> updateFirmwareOTA(
+      PlatformFile file) async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String? accessToken = prefs.getString('jwt');
+
+      final String apiUrl = 'http://$baseUrl:5000/api/placas/ota';
+
+      final request = http.MultipartRequest('POST', Uri.parse(apiUrl))
+        ..headers.addAll({
+          'Authorization': 'Bearer $accessToken',
+          'Accept': 'application/json',
+        })
+        ..files.add(
+          http.MultipartFile.fromBytes(
+            'firmware',
+            file.bytes!,
+            filename: file.name,
+          ),
+        );
+
+      final response = await request.send();
+
+      if (response.statusCode != 200) {
         throw Exception("Erro na requisição ${response.statusCode}");
       }
     } catch (e) {

@@ -21,3 +21,6 @@ class Config:
     MQTT_USERNAME = ''
     MQTT_PASSWORD = ''
     MQTT_KEEPALIVE = 5
+
+    # ip config
+    LOCAL_IP = "192.168.1.10"

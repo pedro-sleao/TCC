@@ -1,5 +1,6 @@
 import 'package:dashboard_flutter/cubit/HTTPCubit/http_cubit.dart';
 import 'package:dashboard_flutter/cubit/LoginCubit/login_cubit.dart';
+import 'package:dashboard_flutter/cubit/OTACubit/ota_cubit.dart';
 import 'package:dashboard_flutter/cubit/RegisterCubit/register_cubit.dart';
 import 'package:dashboard_flutter/cubit/SocketCubit/socketio_cubit.dart';
 import 'package:dashboard_flutter/data/http_services.dart';
@@ -9,6 +10,7 @@ import 'package:dashboard_flutter/presentation/screens/admin_mobile.dart';
 import 'package:dashboard_flutter/presentation/screens/dashboard.dart';
 import 'package:dashboard_flutter/presentation/screens/login.dart';
 import 'package:dashboard_flutter/presentation/screens/metrics_mobile.dart';
+import 'package:dashboard_flutter/presentation/screens/ota.dart';
 import 'package:dashboard_flutter/presentation/screens/register_node.dart';
 import 'package:dashboard_flutter/presentation/screens/table_mobile.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +29,7 @@ class AppRouter {
   late HttpCubit httpCubit;
   late RegisterCubit registerCubit;
   late SocketCubit socketCubit;
+  late OtaCubit otaCubit;
 
   /// Cria uma instância do [AppRouter] e inicializa os cubits e o repositório necessários.
   AppRouter() {
@@ -35,6 +38,7 @@ class AppRouter {
     httpCubit = HttpCubit(repository: repository);
     registerCubit = RegisterCubit(repository: repository);
     socketCubit = SocketCubit();
+    otaCubit = OtaCubit(repository: repository);
   }
 
   /// Gera uma rota para a aplicação com base nas configurações fornecidas.
@@ -139,6 +143,20 @@ class AppRouter {
                   ],
                   child:
                       _checkAuthentication(loginCubit, const UsersListPage()),
+                ),
+            settings: settings);
+      case "/ota":
+        return MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider.value(value: httpCubit),
+                    BlocProvider.value(value: loginCubit),
+                    BlocProvider.value(value: socketCubit),
+                    BlocProvider.value(value: registerCubit),
+                    BlocProvider.value(value: otaCubit)
+                  ],
+                  child:
+                      _checkAuthentication(loginCubit, const OtaPage()),
                 ),
             settings: settings);
       default:

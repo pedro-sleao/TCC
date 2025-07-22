@@ -246,7 +246,16 @@ Widget buildDrawer(context) {
                 color: Colors.black,
               ),
             ),
-          ]
+          ],
+          IconButton(
+            onPressed: () {
+              Navigator.pushNamed(context, '/ota');
+            },
+            icon: Icon(
+              Icons.update,
+              color: Colors.black,
+            ),
+          ),
         ],
       ),
     ),

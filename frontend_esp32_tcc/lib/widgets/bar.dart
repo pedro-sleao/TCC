@@ -75,7 +75,7 @@ class _BarWidgetState extends State<BarWidget> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("${widget.title} ($unidade)"),
+              Text("${widget.title} ${unidade == "" ? "" : '($unidade)'}"),
               const SizedBox(
                 height: 5,
               ),

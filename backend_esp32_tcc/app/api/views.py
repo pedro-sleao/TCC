@@ -1,7 +1,8 @@
 import marshmallow.exceptions
+import os
 from datetime import datetime, timedelta
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt, get_jwt_identity
-from flask import request, jsonify
+from flask import request, jsonify, send_from_directory, current_app
 from sqlalchemy import and_
 from sqlalchemy.dialects.postgresql import  aggregate_order_by
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -13,6 +14,12 @@ from .schemas import SensoresGETSchema, PlacasSchema, UsersSchema, ArgsRequestsS
 from ..db import db
 from ..socketio.sockets import socketio
 from .helper import require_apikey
+from ..mqtt import mqtt_client
+
+# Caminho para a pasta do firmware
+current_path = os.path.abspath(__file__)
+app_folder = os.path.dirname(current_path)
+firmware_folder = os.path.join(app_folder, 'firmware_file')
 
 @api_bp.route('/api/dados/placas', methods=['GET', 'POST'])
 @jwt_required()
@@ -68,6 +75,31 @@ def get_nodes_data():
         db.session.commit()
 
         return jsonify({'message': 'Dados adicionados corretamente.'})
+
+@api_bp.route('/api/placas/ota', methods=['POST'])
+@jwt_required()
+def upload_file():
+    if 'firmware' not in request.files:
+        return 'Arquivo não encontrado', 400
+    file = request.files['firmware']
+
+    os.makedirs(firmware_folder, exist_ok=True)
+
+    file.save(os.path.join(firmware_folder, file.filename))
+
+    # URL do firmware
+    ota_url = f"http://{current_app.config['LOCAL_IP']}:5000/firmware/{file.filename}"
+
+    # Busca todos os devices do banco
+    devices = Placas.query.all()
+
+    # Publica a URL para cada device
+    for device in devices:
+        topic = f"devices/{device.id_placa}/firmware_update"
+        mqtt_client.publish(topic, ota_url)
+
+
+    return jsonify({'message': 'Dados adicionados corretamente.'}), 200
 
 @api_bp.route('/api/dados/sensores', methods=['GET'])
 @jwt_required()
@@ -287,3 +319,8 @@ def auth():
         return jsonify({'message': 'Usuário validado com sucesso.', 'access_token': access_token, 'role': user.role}), 200
     else:
         return jsonify({'message': 'Usuário e/ou senha inválidos.'}), 401
+    
+@api_bp.route('/firmware/<filename>')
+def download_firmware(filename):
+    return send_from_directory(firmware_folder, filename, as_attachment=True)
+    

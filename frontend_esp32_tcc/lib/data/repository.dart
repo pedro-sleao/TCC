@@ -2,6 +2,7 @@
 import 'package:dashboard_flutter/data/http_services.dart';
 import 'package:dashboard_flutter/data/models/locals.dart';
 import 'package:dashboard_flutter/data/models/placa_data.dart';
+import 'package:file_picker/file_picker.dart';
 
 /// Repositório para acesso e manipulação de dados.
 ///
@@ -145,5 +146,20 @@ class Repository {
     final responseMsg = await httpService.registerNodeData(
         localName, idPlaca, sensorStates);
     return responseMsg['message'];
+  }
+
+  Future<void> uploadFirmware() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['bin'],
+      withData: true,
+    );
+
+    if (result == null || result.files.single.bytes == null) {
+      throw Exception("Arquivo inválido ou não selecionado.");
+    }
+
+    final file = result.files.single;
+    await httpService.updateFirmwareOTA(file);
   }
 }
