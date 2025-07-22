@@ -7,6 +7,7 @@
 #include <math.h>
 #include <sys/time.h>
 #include "esp_sntp.h"
+#include "nvs_flash.h"
 
 #include "sensors_manager.h"
 #include "adc_manager.h"
@@ -17,6 +18,8 @@
 
 const static char *TAG = "sensors_manager";
 
+SemaphoreHandle_t adc_mutex = NULL;
+
 static const gpio_num_t sensor_pins[] = {
     GPIO_NUM_16,
     GPIO_NUM_17,
@@ -25,6 +28,13 @@ static const gpio_num_t sensor_pins[] = {
 };
 
 static const onewire_addr_t TEMPERATURE_SENSOR_ADDR = 0x5e00000000f59728;
+
+// Flash memory
+nvs_handle_t my_handle;
+
+// Sensors variables
+float ph_voltage_6_86 = 1.735;
+float ph_voltage_9_18 = 1.473;
 
 static void enable_sensor(sensor_type_t sensor_type) {
     gpio_set_level(sensor_pins[sensor_type], 1);
@@ -74,23 +84,26 @@ static void sensors_manager_task(void *parm) {
         uxBits = mqtt_event_get_bits();
         if (((timeinfo.tm_hour % 3 == 0) && (timeinfo.tm_hour != last_measure_time)) || (uxBits & MQTT_SEND_DATA_EVENT)) {
             // Read sensors
-            adc_init();
-            enable_sensor(TURBIDITY_SENSOR);
-            get_adc_avarage(TURBIDITY_SENSOR, &turbidity_adc_value, 10);
-            disable_sensor(TURBIDITY_SENSOR);
+            if (xSemaphoreTake(adc_mutex, pdMS_TO_TICKS(2000))) {
+                adc_init();
+                enable_sensor(TURBIDITY_SENSOR);
+                get_adc_avarage(TURBIDITY_SENSOR, &turbidity_adc_value, 10);
+                disable_sensor(TURBIDITY_SENSOR);
 
-            enable_sensor(TDS_SENSOR);
-            get_adc_avarage_voltage(TDS_SENSOR, &tds_voltage, 10);
-            disable_sensor(TDS_SENSOR);
+                enable_sensor(TDS_SENSOR);
+                get_adc_avarage_voltage(TDS_SENSOR, &tds_voltage, 10);
+                disable_sensor(TDS_SENSOR);
 
-            enable_sensor(PH_SENSOR);
-            get_adc_avarage_voltage(PH_SENSOR, &ph_voltage, 10);
-            disable_sensor(PH_SENSOR);
-            adc_deinit();
-    
-            enable_sensor(TEMPERATURE_SENSOR);
-            ds18b20_measure_and_read(GPIO_NUM_4, TEMPERATURE_SENSOR_ADDR, &temperature);
-            disable_sensor(TEMPERATURE_SENSOR);
+                enable_sensor(PH_SENSOR);
+                get_adc_avarage_voltage(PH_SENSOR, &ph_voltage, 10);
+                disable_sensor(PH_SENSOR);
+                adc_deinit();
+
+                xSemaphoreGive(adc_mutex);
+            }
+                enable_sensor(TEMPERATURE_SENSOR);
+                ds18b20_measure_and_read(GPIO_NUM_4, TEMPERATURE_SENSOR_ADDR, &temperature);
+                disable_sensor(TEMPERATURE_SENSOR);
 
             // Prepare message to mqtt
             // turbidity
@@ -103,8 +116,13 @@ static void sensors_manager_task(void *parm) {
             
             // pH
             // m = (9.18 - 6.86)/(CALIBRACAO_PH6_86 - CALIBRACAO_PH_9_18);
-            // b = 9.18 - m*CALIBRACAO_PH6_86;
+            // b = 6.86 + m*CALIBRACAO_PH6_86;
+            m = (9.18 - 6.86)/(ph_voltage_6_86 - ph_voltage_9_18);
+            b = 6.86 + m*ph_voltage_6_86;
             ph = -8.85*ph_voltage + 22.2;
+
+            ESP_LOGI(TAG, "PH_M = %.2f", m);
+            ESP_LOGI(TAG, "PH_B = %.2f", b);
             
             // Format time
             strftime(strftime_buf, sizeof(strftime_buf), "%Y-%m-%dT%H:%M:%S%z", &timeinfo);
@@ -140,10 +158,93 @@ static void sensors_manager_task(void *parm) {
     }
 }
 
+static void load_calibration() {
+    esp_err_t err;
+
+    ESP_LOGI(TAG, "Loading storaged calibration values");
+
+    err = nvs_open("storage", NVS_READONLY, &my_handle);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "NVS open failed, using defaults");
+    }
+
+    size_t required_size = sizeof(ph_voltage_9_18);
+
+    err = nvs_get_blob(my_handle, "calib_9_18", &ph_voltage_9_18, &required_size);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to read calib_9_18, using default");
+    }
+
+    required_size = sizeof(ph_voltage_6_86);
+    err = nvs_get_blob(my_handle, "calib_6_86", &ph_voltage_6_86, &required_size);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to read calib_6_86, using default: %s", esp_err_to_name(err));
+    }
+
+    nvs_close(my_handle);
+
+    ESP_LOGI(TAG, "Calibration values loaded");
+}
+
 void init_sensors_task(void) {
     ESP_LOGI(TAG, "Initializing sensors manager task...");
+    load_calibration();
     xTaskCreate(sensors_manager_task, "sensors_manager_task", 4096, NULL, 3, NULL);
 }
+
+static void calibrate_ph_task(void *parm) {
+    esp_err_t err;
+
+    float expected_value = *((float*)parm);
+    float measured;
+
+    if (xSemaphoreTake(adc_mutex, pdMS_TO_TICKS(6000))) {
+        adc_init();
+        enable_sensor(PH_SENSOR);
+        get_adc_avarage_voltage(PH_SENSOR, &measured, 10);
+        disable_sensor(PH_SENSOR);
+        adc_deinit();
+        xSemaphoreGive(adc_mutex);
+    } else {
+        ESP_LOGI(TAG, "Error on pH calibration");
+        vTaskDelete(NULL);
+    }
+
+    err = nvs_open("storage", NVS_READWRITE, &my_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error opening NVS handle!");
+    }
+
+    if (expected_value == 9.18) {
+        ph_voltage_9_18 = measured;
+        err = nvs_set_blob(my_handle, "calib_9_18", &ph_voltage_9_18, sizeof(ph_voltage_9_18));
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to write calib_9_18");
+        }
+    } else {
+        ph_voltage_6_86 = measured;
+        err = nvs_set_blob(my_handle, "calib_6_86", &ph_voltage_6_86, sizeof(ph_voltage_6_86));
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to write calib_6_86");
+        }
+    }
+
+    err = nvs_commit(my_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to commit NVS");
+    }   
+
+    nvs_close(my_handle);
+
+    ESP_LOGI(TAG, "pH calibration task done");
+    vTaskDelete(NULL);
+}
+
+void init_calibrate_ph_task(float *expected_value) {
+    ESP_LOGI(TAG, "Initializing ph calibration task...");
+    xTaskCreate(calibrate_ph_task, "calibrate_ph_task", 2048, expected_value, 3, NULL);
+}
+
 
 
 

@@ -9,6 +9,7 @@
 
 #include "mqtt_service.h"
 #include "device_info.h"
+#include "sensors_manager.h"
 
 static const char *TAG = "mqtt";
 
@@ -28,13 +29,19 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     esp_mqtt_client_handle_t client = event->client;
     static char firmware_update_topic[64];
     static char send_data_topic[64];
-    //int msg_id;
+    static char calibration_topic[64];
+    // Sensor calibration
+    static float expected_value;
     switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
         snprintf(status_message, sizeof(status_message), "{\"status\": \"1\", \"firmware_version\": \"%s\"}", firmware_version);
         esp_mqtt_client_publish(client, status_topic, status_message, 0, 1, 0);
         ESP_LOGI(TAG, "Published LWT status to topic='%s'", status_topic);
+
+        snprintf(calibration_topic, sizeof(calibration_topic), "devices/%s/calibration", device_id_str);
+        esp_mqtt_client_subscribe(client, calibration_topic, 0);
+        ESP_LOGI(TAG, "Subscribed to topic %s", calibration_topic);
 
         snprintf(send_data_topic, sizeof(send_data_topic), "devices/%s/send_data", device_id_str);
         esp_mqtt_client_subscribe(client, send_data_topic, 0);
@@ -68,6 +75,13 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
         if (strncmp(event->topic, send_data_topic, event->topic_len) == 0) {
             xEventGroupSetBits(mqtt_event_group, MQTT_SEND_DATA_EVENT);
+        }
+
+        if (strncmp(event->topic, calibration_topic, event->topic_len) == 0) {
+            char data_str[32] = {0};
+            snprintf(data_str, sizeof(data_str), "%.*s", event->data_len, event->data);
+            expected_value = atof(data_str);
+            init_calibrate_ph_task(&expected_value);
         }
         break;
     case MQTT_EVENT_ERROR:

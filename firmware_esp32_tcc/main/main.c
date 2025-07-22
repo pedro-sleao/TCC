@@ -49,6 +49,12 @@ void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(500));
     };
 
+    adc_mutex = xSemaphoreCreateMutex();
+    if (adc_mutex == NULL) {
+        ESP_LOGE(TAG, "Failed to create ADC mutex");
+        return;
+    }
+
     device_info_init();
 
     mqtt_app_start();
