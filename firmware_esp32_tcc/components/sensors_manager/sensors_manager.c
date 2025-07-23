@@ -35,6 +35,7 @@ nvs_handle_t my_handle;
 // Sensors variables
 float ph_voltage_6_86 = 1.735;
 float ph_voltage_9_18 = 1.473;
+float tds_correction_factor = 842 / (float) 930;
 
 static void enable_sensor(sensor_type_t sensor_type) {
     gpio_set_level(sensor_pins[sensor_type], 1);
@@ -50,7 +51,6 @@ static void sensors_manager_task(void *parm) {
     // Sensors variables
     int turbidity_adc_value, turbidity;
     float tds_voltage, tds, compensationCoefficient, compensationVoltage;
-    float tds_correction_factor = 842 / (float) 930;
     float temperature;
     float ph, ph_voltage, m, b;
     // Time variables
@@ -84,7 +84,7 @@ static void sensors_manager_task(void *parm) {
         uxBits = mqtt_event_get_bits();
         if (((timeinfo.tm_hour % 3 == 0) && (timeinfo.tm_hour != last_measure_time)) || (uxBits & MQTT_SEND_DATA_EVENT)) {
             // Read sensors
-            if (xSemaphoreTake(adc_mutex, pdMS_TO_TICKS(2000))) {
+            if (xSemaphoreTake(adc_mutex, pdMS_TO_TICKS(2500))) {
                 adc_init();
                 enable_sensor(TURBIDITY_SENSOR);
                 get_adc_avarage(TURBIDITY_SENSOR, &turbidity_adc_value, 10);
@@ -165,7 +165,7 @@ static void load_calibration() {
 
     err = nvs_open("storage", NVS_READONLY, &my_handle);
     if (err != ESP_OK) {
-        ESP_LOGW(TAG, "NVS open failed, using defaults");
+        ESP_LOGW(TAG, "NVS open failed, using defaults: %s", esp_err_to_name(err));
     }
 
     size_t required_size = sizeof(ph_voltage_9_18);
@@ -181,9 +181,18 @@ static void load_calibration() {
         ESP_LOGW(TAG, "Failed to read calib_6_86, using default: %s", esp_err_to_name(err));
     }
 
+    required_size = sizeof(tds_correction_factor);
+    err = nvs_get_blob(my_handle, "calib_tds", &tds_correction_factor, &required_size);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to read calib_tds, using default: %s", esp_err_to_name(err));
+    }
+
     nvs_close(my_handle);
 
     ESP_LOGI(TAG, "Calibration values loaded");
+    ESP_LOGI(TAG, "calib_9_18 = %.2f", ph_voltage_9_18);
+    ESP_LOGI(TAG, "calib_6_86 = %.2f", ph_voltage_6_86);
+    ESP_LOGI(TAG, "calib_tds = %.2f", tds_correction_factor);
 }
 
 void init_sensors_task(void) {
@@ -240,10 +249,57 @@ static void calibrate_ph_task(void *parm) {
     vTaskDelete(NULL);
 }
 
+static void calibrate_tds_task(void *parm) {
+    esp_err_t err;
+
+    float expected_value = *((float*)parm);
+    float measured;
+
+    if (xSemaphoreTake(adc_mutex, pdMS_TO_TICKS(6000))) {
+        adc_init();
+        enable_sensor(TDS_SENSOR);
+        get_adc_avarage_voltage(TDS_SENSOR, &measured, 10);
+        disable_sensor(TDS_SENSOR);
+        adc_deinit();
+        xSemaphoreGive(adc_mutex);
+    } else {
+        ESP_LOGI(TAG, "Error on TDS calibration");
+        vTaskDelete(NULL);
+    }
+
+    tds_correction_factor = expected_value / measured;
+
+    err = nvs_open("storage", NVS_READWRITE, &my_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error opening NVS handle!");
+    }
+
+    err = nvs_set_blob(my_handle, "calib_tds", &tds_correction_factor, sizeof(tds_correction_factor));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to write calib_tds");
+    }
+
+    err = nvs_commit(my_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to commit NVS");
+    }   
+
+    nvs_close(my_handle);
+
+    ESP_LOGI(TAG, "TDS calibration task done");
+    vTaskDelete(NULL);
+}
+
 void init_calibrate_ph_task(float *expected_value) {
     ESP_LOGI(TAG, "Initializing ph calibration task...");
     xTaskCreate(calibrate_ph_task, "calibrate_ph_task", 2048, expected_value, 3, NULL);
 }
+
+void init_calibrate_tds_task(float *expected_value) {
+    ESP_LOGI(TAG, "Initializing TDS calibration task...");
+    xTaskCreate(calibrate_tds_task, "calibrate_tds_task", 2048, expected_value, 3, NULL);
+}
+
 
 
 

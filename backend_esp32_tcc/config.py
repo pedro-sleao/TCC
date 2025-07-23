@@ -23,4 +23,4 @@ class Config:
     MQTT_KEEPALIVE = 5
 
     # ip config
-    LOCAL_IP = "192.168.1.10"
+    LOCAL_IP = "192.168.0.110"

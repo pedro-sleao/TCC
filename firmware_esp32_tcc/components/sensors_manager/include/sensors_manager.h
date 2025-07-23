@@ -16,3 +16,4 @@ typedef enum {
 
 void init_sensors_task(void);
 void init_calibrate_ph_task(float *expected_value);
+void init_calibrate_tds_task(float *expected_value);
