@@ -101,6 +101,31 @@ def upload_file():
 
     return jsonify({'message': 'Dados adicionados corretamente.'}), 200
 
+@api_bp.route('/api/sensores/calibracao', methods=['POST'])
+@jwt_required()
+def upload_file():
+    calibration_json = request.get_json()
+
+    # Verifica se as chaves da requisição existem
+    received_keys = set(calibration_json.keys())
+    invalid_keys = received_keys - ("id_placa", "ph", "tds")
+    if invalid_keys:
+        return jsonify({'error': f'Chave(s) inválida(s) detectada(s): {", ".join(invalid_keys)}'}), 400
+
+    id_placa = calibration_json.get('id_placa')
+
+    if "ph" in received_keys:
+        sensor_value = calibration_json.get('ph')
+        topic = f"devices/{id_placa}/ph_calibration"
+        mqtt_client.publish(topic, sensor_value)
+    else:
+        sensor_value = calibration_json.get('tds')
+        topic = f"devices/{id_placa}/tds_calibration"
+        mqtt_client.publish(topic, sensor_value)
+
+    return jsonify({'message': 'Dados enviados corretamente.'}), 200
+
+
 @api_bp.route('/api/dados/sensores', methods=['GET'])
 @jwt_required()
 def get_sensor_data():
