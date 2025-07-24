@@ -148,6 +148,10 @@ class Repository {
     return responseMsg['message'];
   }
 
+
+  /// Envia o arquivo binario do firmware para o servidor
+  /// 
+  /// Faz uma achamada ao método `updateFirmwareOTA` do `HttpService` com o arquivo selecionado.
   Future<void> uploadFirmware() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -161,5 +165,31 @@ class Repository {
 
     final file = result.files.single;
     await httpService.updateFirmwareOTA(file);
+  }
+
+
+  /// Envia os dados de calibração para o servidor
+  Future<String> sendCalibrationData(String idPlaca,
+    dynamic phExpectedValue, dynamic tdsExpectedValue) async {
+    
+    try {
+      final responseMsg = await httpService.sendCalibrationData(
+        idPlaca, phExpectedValue, tdsExpectedValue);
+      return responseMsg['message'];
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  /// Solicita novos dados dos sensores em um local
+  Future<String> requestNewData(String local) async {
+    
+    try {
+      final responseMsg = await httpService.requestNewData(
+        local);
+      return responseMsg['message'];
+    } catch (e) {
+      throw Exception(e.toString());
+    }
   }
 }

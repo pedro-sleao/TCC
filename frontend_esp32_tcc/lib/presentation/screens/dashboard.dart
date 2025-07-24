@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
 
 import 'package:dashboard_flutter/constants.dart';
+import 'package:dashboard_flutter/cubit/CalibrationCubit/calibration_cubit.dart';
 import 'package:dashboard_flutter/cubit/HTTPCubit/http_cubit.dart';
 import 'package:dashboard_flutter/cubit/LoginCubit/login_cubit.dart';
 import 'package:dashboard_flutter/cubit/SocketCubit/socketio_cubit.dart';
@@ -11,7 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Página principal da aplicação.
-/// 
+///
 /// Esta página exibe as métricas e gráficos relacionados aos sensores. Ela utiliza
 /// o [HttpCubit] para gerenciar o estado dos dados dos sensores e o [SocketCubit]
 /// para gerenciar as conexões via socket. O layout é ajustado conforme o tamanho da tela
@@ -25,6 +26,9 @@ class DashboardPage extends StatelessWidget {
 
   /// Instância do cubit responsável pela comunicação via sockets.
   late SocketCubit _socketCubit;
+
+  /// Instância do cubit responsável pela calibração dos sensores.
+  late CalibrationCubit _calibrationCubit;
 
   /// Cria uma instância de [DashboardPage].
   DashboardPage({super.key});
@@ -46,6 +50,8 @@ class DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     _httpCubit = BlocProvider.of<HttpCubit>(context);
     _socketCubit = BlocProvider.of<SocketCubit>(context);
+    _calibrationCubit = BlocProvider.of<CalibrationCubit>(context);
+
     return BlocBuilder<HttpCubit, HttpState>(
         bloc: _httpCubit,
         builder: (context, state) {
@@ -105,7 +111,7 @@ class DashboardPage extends StatelessWidget {
               ),
             );
           } else if (state is HttpDataLoaded) {
-            _socketCubit.initSocket(_httpCubit);
+            _socketCubit.initSocket(_httpCubit, _calibrationCubit);
             return Scaffold(
               drawerScrimColor: Colors.transparent,
               key: GlobalKey<ScaffoldState>(),
@@ -133,6 +139,10 @@ class DashboardPage extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(10)),
                             child: Row(
                               children: [
+                                requestNewDataButton(context),
+                                SizedBox(
+                                  width: 12,
+                                ),
                                 DropdownButton<String>(
                                   value: _httpCubit.selectedLocal,
                                   items: getDropDownItems(localList),
@@ -217,6 +227,7 @@ class DashboardPage extends StatelessWidget {
 /// botão adicional para acessar a página de administração é exibido.
 Widget buildDrawer(context) {
   LoginCubit loginCubit = BlocProvider.of<LoginCubit>(context);
+  HttpCubit httpCubit = BlocProvider.of<HttpCubit>(context);
 
   return SafeArea(
     child: Container(
@@ -226,7 +237,8 @@ Widget buildDrawer(context) {
         children: [
           IconButton(
             onPressed: () {
-              Navigator.pushNamed(context, '/register');
+              Navigator.pushNamed(context, '/register')
+                  .then((v) => {httpCubit.resetState()});
             },
             icon: Icon(
               Icons.table_chart,
@@ -247,12 +259,27 @@ Widget buildDrawer(context) {
               ),
             ),
           ],
+          SizedBox(
+            height: 10,
+          ),
           IconButton(
             onPressed: () {
               Navigator.pushNamed(context, '/ota');
             },
             icon: Icon(
               Icons.update,
+              color: Colors.black,
+            ),
+          ),
+          SizedBox(
+            height: 10,
+          ),
+          IconButton(
+            onPressed: () {
+              Navigator.pushNamed(context, '/calibration');
+            },
+            icon: Icon(
+              Icons.tune,
               color: Colors.black,
             ),
           ),
@@ -293,6 +320,10 @@ Widget noDataScreen(context, HttpCubit httpCubit,
                       borderRadius: BorderRadius.circular(10)),
                   child: Row(
                     children: [
+                      requestNewDataButtonNoDataScreen(context),
+                      SizedBox(
+                        width: 12,
+                      ),
                       DropdownButton<String>(
                         value: httpCubit.selectedLocal,
                         items: dropDownItens,
@@ -322,8 +353,10 @@ Widget noDataScreen(context, HttpCubit httpCubit,
                   children: [
                     Text(message),
                     Icon(Icons.error),
-                    if (message == "Nenhum dado encontrado")...[
-                      SizedBox(height: 20,),
+                    if (message == "Nenhum dado encontrado") ...[
+                      SizedBox(
+                        height: 20,
+                      ),
                       SelectDays()
                     ]
                   ],
@@ -351,3 +384,30 @@ Widget logoutButton(context) {
     ),
   );
 }
+
+Widget requestNewDataButton(context) {
+  HttpCubit httpCubit = BlocProvider.of<HttpCubit>(context);
+  return IconButton(
+    onPressed: () {
+      httpCubit.requestNewData();
+    },
+    icon: Icon(
+      Icons.refresh,
+      color: Colors.black,
+    ),
+  );
+}
+
+Widget requestNewDataButtonNoDataScreen(context) {
+  HttpCubit httpCubit = BlocProvider.of<HttpCubit>(context);
+  return IconButton(
+    onPressed: () {
+      httpCubit.requestNewDataNoDataScreen();
+    },
+    icon: Icon(
+      Icons.refresh,
+      color: Colors.black,
+    ),
+  );
+}
+

@@ -204,8 +204,14 @@ void init_sensors_task(void) {
 static void calibrate_ph_task(void *parm) {
     esp_err_t err;
 
+    // Buffer for mqtt messages
+    char topic[64];
+    char message[128];
+
     float expected_value = *((float*)parm);
     float measured;
+
+    snprintf(topic, sizeof(topic), "devices/%s/ph_calibration_response", device_info_get_id());
 
     if (xSemaphoreTake(adc_mutex, pdMS_TO_TICKS(6000))) {
         adc_init();
@@ -216,12 +222,16 @@ static void calibrate_ph_task(void *parm) {
         xSemaphoreGive(adc_mutex);
     } else {
         ESP_LOGI(TAG, "Error on pH calibration");
+        snprintf(message, sizeof(message), "Error on mutex");
+        mqtt_publish(topic, message);
         vTaskDelete(NULL);
     }
 
     err = nvs_open("storage", NVS_READWRITE, &my_handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Error opening NVS handle!");
+        snprintf(message, sizeof(message), "Error on NVS handle!");
+        mqtt_publish(topic, message);
     }
 
     if (expected_value == 9.18) {
@@ -229,31 +239,47 @@ static void calibrate_ph_task(void *parm) {
         err = nvs_set_blob(my_handle, "calib_9_18", &ph_voltage_9_18, sizeof(ph_voltage_9_18));
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "Failed to write calib_9_18");
+            snprintf(message, sizeof(message), "Failed to write ph 9.18 calibration");
+            mqtt_publish(topic, message);
         }
     } else {
         ph_voltage_6_86 = measured;
         err = nvs_set_blob(my_handle, "calib_6_86", &ph_voltage_6_86, sizeof(ph_voltage_6_86));
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "Failed to write calib_6_86");
+            snprintf(message, sizeof(message), "Failed to write ph 6.86 calibration");
+            mqtt_publish(topic, message);
         }
     }
 
     err = nvs_commit(my_handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to commit NVS");
+        snprintf(message, sizeof(message), "Failed to commit NVS");
+        mqtt_publish(topic, message);
     }   
 
     nvs_close(my_handle);
 
     ESP_LOGI(TAG, "pH calibration task done");
+
+    snprintf(message, sizeof(message), "Calibration done");
+    mqtt_publish(topic, message);
+
     vTaskDelete(NULL);
 }
 
 static void calibrate_tds_task(void *parm) {
     esp_err_t err;
 
+    // Buffer for mqtt messages
+    char topic[64];
+    char message[128];
+
     float expected_value = *((float*)parm);
     float measured;
+
+    snprintf(topic, sizeof(topic), "devices/%s/tds_calibration_response", device_info_get_id());
 
     if (xSemaphoreTake(adc_mutex, pdMS_TO_TICKS(6000))) {
         adc_init();
@@ -264,6 +290,8 @@ static void calibrate_tds_task(void *parm) {
         xSemaphoreGive(adc_mutex);
     } else {
         ESP_LOGI(TAG, "Error on TDS calibration");
+        snprintf(message, sizeof(message), "Error on mutex");
+        mqtt_publish(topic, message);
         vTaskDelete(NULL);
     }
 
@@ -272,32 +300,41 @@ static void calibrate_tds_task(void *parm) {
     err = nvs_open("storage", NVS_READWRITE, &my_handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Error opening NVS handle!");
+        snprintf(message, sizeof(message), "Error on NVS handle!");
+        mqtt_publish(topic, message);
     }
 
     err = nvs_set_blob(my_handle, "calib_tds", &tds_correction_factor, sizeof(tds_correction_factor));
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to write calib_tds");
+        snprintf(message, sizeof(message), "Failed to write tds calibration");
+        mqtt_publish(topic, message);
     }
 
     err = nvs_commit(my_handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to commit NVS");
+        snprintf(message, sizeof(message), "Failed to commit NVS");
+        mqtt_publish(topic, message);
     }   
 
     nvs_close(my_handle);
 
     ESP_LOGI(TAG, "TDS calibration task done");
+    snprintf(message, sizeof(message), "Calibration done");
+    mqtt_publish(topic, message);
+
     vTaskDelete(NULL);
 }
 
 void init_calibrate_ph_task(float *expected_value) {
     ESP_LOGI(TAG, "Initializing ph calibration task...");
-    xTaskCreate(calibrate_ph_task, "calibrate_ph_task", 2048, expected_value, 3, NULL);
+    xTaskCreate(calibrate_ph_task, "calibrate_ph_task", 4096, expected_value, 3, NULL);
 }
 
 void init_calibrate_tds_task(float *expected_value) {
     ESP_LOGI(TAG, "Initializing TDS calibration task...");
-    xTaskCreate(calibrate_tds_task, "calibrate_tds_task", 2048, expected_value, 3, NULL);
+    xTaskCreate(calibrate_tds_task, "calibrate_tds_task", 4096, expected_value, 3, NULL);
 }
 
 

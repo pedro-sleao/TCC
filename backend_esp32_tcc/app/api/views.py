@@ -103,19 +103,20 @@ def upload_file():
 
 @api_bp.route('/api/sensores/calibracao', methods=['POST'])
 @jwt_required()
-def upload_file():
+def calibrate_sensors():
     calibration_json = request.get_json()
 
     # Verifica se as chaves da requisição existem
     received_keys = set(calibration_json.keys())
-    invalid_keys = received_keys - ("id_placa", "ph", "tds")
+    invalid_keys = received_keys - set(["id_placa", "ph", "tds"])
     if invalid_keys:
         return jsonify({'error': f'Chave(s) inválida(s) detectada(s): {", ".join(invalid_keys)}'}), 400
 
     id_placa = calibration_json.get('id_placa')
-
-    if "ph" in received_keys:
-        sensor_value = calibration_json.get('ph')
+    
+    ph_value = calibration_json.get('ph')
+    if ph_value is not None:
+        sensor_value = ph_value
         topic = f"devices/{id_placa}/ph_calibration"
         mqtt_client.publish(topic, sensor_value)
     else:
@@ -165,6 +166,21 @@ def get_sensor_data():
     dados_formatados = SensoresGETSchema(many=True).dump(dados)
 
     return jsonify(dados_formatados)
+
+@api_bp.route('/api/sensores/novos_dados', methods=['POST'])
+@jwt_required()
+def send_new_data():
+    data = request.get_json()
+
+    local_req = data.get("local")
+
+    placas = Placas.query.filter_by(local=local_req).all()
+
+    for placa in placas:
+        topic = f"devices/{placa.id_placa}/send_data"
+        mqtt_client.publish(topic, "1")
+
+    return jsonify({'message': 'Novos dados solicitados.'}), 200
 
 @api_bp.route('/api/dados/local', methods=['GET'])
 @jwt_required()
@@ -311,7 +327,7 @@ def get_users():
         result = UsersSchema(many=True).dump(users)
         return jsonify({'message': 'Dados dos usuários obtidos com sucesso.', 'data': result})
 
-    return jsonify({'message': 'Nenhum usuário encontrado'})
+    return jsonify({'message': 'Nenhum usuário encontrado', 'data': []})
 
 @api_bp.route('/usuario', methods=['GET'])
 @jwt_required()

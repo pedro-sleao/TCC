@@ -209,6 +209,23 @@ class HttpCubit extends Cubit<HttpState> {
     });
   }
 
+  /// Solicita novos dados dos sensores em um local
+  Future<void> requestNewData() async {
+    repository.requestNewData(selectedLocal!).then((value) {
+    }).catchError((e) {
+      emit(HttpError(errorMessage: e.toString()));
+    });
+  }
+
+  /// Solicita novos dados dos sensores em um local.
+  Future<void> requestNewDataNoDataScreen() async {
+    repository.requestNewData(selectedLocal!).then((value) {
+      emit(HttpInitial());
+    }).catchError((e) {
+      emit(HttpError(errorMessage: e.toString()));
+    });
+  }
+
   /// Reseta o estado do cubit para o estado inicial.
   ///
   /// Emite o estado [HttpInitial] para reiniciar o estado do cubit.

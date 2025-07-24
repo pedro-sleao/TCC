@@ -262,6 +262,10 @@ class HttpService {
     }
   }
 
+
+  /// Envia o arquivo binario do firmware para o servidor
+  /// 
+  /// Faz uma requisicao POST para o endpoint `api/dados/placas` com o arquivo selecionado.
   Future<void> updateFirmwareOTA(
       PlatformFile file) async {
     try {
@@ -286,6 +290,76 @@ class HttpService {
       final response = await request.send();
 
       if (response.statusCode != 200) {
+        throw Exception("Erro na requisição ${response.statusCode}");
+      }
+    } catch (e) {
+      throw Exception("Erro na conexão com o servidor: ${e.toString()}");
+    }
+  }
+
+  Future<Map<String, dynamic>> sendCalibrationData(
+      String idPlaca,
+      dynamic phExpectedValue,
+      dynamic tdsExpectedValue) async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+      final String? accessToken = prefs.getString('jwt');
+      final String apiUrl = 'http://$baseUrl:5000/api/sensores/calibracao';
+
+      final Map<String, dynamic> requestBody = {
+        'id_placa': idPlaca,
+      };
+
+      if (phExpectedValue != null) {
+        requestBody['ph'] = phExpectedValue;
+      } else if (tdsExpectedValue != null) {
+        requestBody['tds'] = tdsExpectedValue;
+      } else {
+        throw Exception("Erro na inserção dos valores");
+      }
+
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception("Erro na requisição ${response.statusCode}");
+      }
+    } catch (e) {
+      throw Exception("Erro na conexão com o servidor: ${e.toString()}");
+    }
+  }
+
+  /// Envia uma requisição para o servidor pedindo novos dados
+  Future<Map<String, dynamic>> requestNewData(String local) async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+      final String? accessToken = prefs.getString('jwt');
+      final String apiUrl = 'http://$baseUrl:5000/api/sensores/novos_dados';
+
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'local': local,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
         throw Exception("Erro na requisição ${response.statusCode}");
       }
     } catch (e) {

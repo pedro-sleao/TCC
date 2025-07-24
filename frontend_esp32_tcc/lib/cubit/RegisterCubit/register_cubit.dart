@@ -34,15 +34,13 @@ class RegisterCubit extends Cubit<RegisterState> {
   ///
   /// [localName] é o nome do local onde o nó está localizado.
   /// [idPlaca] é o identificador da placa.
-  /// [latitude] é a latitude do local.
-  /// [longitude] é a longitude do local.
   void registerNodeData(String localName, String idPlaca) async {
     repository
         .registerNodeData(localName, idPlaca, sensorStates)
         .then((msg) {
       emit(RegisterDone(registerMessage: msg));
     }).catchError((e) {
-      emit(RegisterError(registerError: e));
+      emit(RegisterError(registerError: e.toString()));
     });
   }
 
@@ -54,7 +52,7 @@ class RegisterCubit extends Cubit<RegisterState> {
     repository.register(username, password).then((msg) {
       emit(RegisterDone(registerMessage: msg));
     }).catchError((e) {
-      emit(RegisterError(registerError: e));
+      emit(RegisterError(registerError: e.toString()));
     });
   }
 
@@ -64,7 +62,7 @@ class RegisterCubit extends Cubit<RegisterState> {
       usersList = users;
       emit(RegisterFetchedUsers());
     }).catchError((e) {
-      emit(RegisterError(registerError: e));
+      emit(RegisterError(registerError: e.toString()));
     });
   }
 
@@ -75,7 +73,7 @@ class RegisterCubit extends Cubit<RegisterState> {
     repository.deleteUser(username).then((msg) {
       emit(RegisterDeletedUser(deleteMessage: msg));
     }).catchError((e) {
-      emit(RegisterError(registerError: e));
+      emit(RegisterError(registerError: e.toString()));
     });
   }
 

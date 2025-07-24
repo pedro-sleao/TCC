@@ -9,6 +9,8 @@ import json
 def handle_connect(client, userdata, flags, rc):
     print("Connected with result code "+str(rc))
     mqtt_client.subscribe('devices/+/status')
+    mqtt_client.subscribe('devices/+/ph_calibration_response')
+    mqtt_client.subscribe('devices/+/tds_calibration_response')
     mqtt_client.subscribe('sensors/+/temperature')
     mqtt_client.subscribe('sensors/+/tds')
     mqtt_client.subscribe('sensors/+/ph')
@@ -22,10 +24,12 @@ def handle_mqtt_message(client, userdata, message):
     topic = message.topic
     payload = message.payload.decode()
 
-    if "devices" in topic:
+    if "devices" in topic and "status" in topic:
         handle_devices(topic, payload)
-    else:
+    elif "sensors" in topic:
         handle_sensors(topic, payload)
+    else:
+        handle_calibration_response(topic, payload)
 
 
 def handle_devices(topic, payload):
@@ -83,3 +87,7 @@ def handle_sensors(topic, payload):
         db.session.commit()
 
         socketio.emit('message', 'New data')
+
+def handle_calibration_response(topic, payload):
+    with mqtt_client.app.app_context():
+        socketio.emit('calibration_response', payload)

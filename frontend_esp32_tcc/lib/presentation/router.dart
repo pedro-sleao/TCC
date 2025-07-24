@@ -1,3 +1,4 @@
+import 'package:dashboard_flutter/cubit/CalibrationCubit/calibration_cubit.dart';
 import 'package:dashboard_flutter/cubit/HTTPCubit/http_cubit.dart';
 import 'package:dashboard_flutter/cubit/LoginCubit/login_cubit.dart';
 import 'package:dashboard_flutter/cubit/OTACubit/ota_cubit.dart';
@@ -7,6 +8,7 @@ import 'package:dashboard_flutter/data/http_services.dart';
 import 'package:dashboard_flutter/data/repository.dart';
 import 'package:dashboard_flutter/presentation/screens/admin.dart';
 import 'package:dashboard_flutter/presentation/screens/admin_mobile.dart';
+import 'package:dashboard_flutter/presentation/screens/calibration.dart';
 import 'package:dashboard_flutter/presentation/screens/dashboard.dart';
 import 'package:dashboard_flutter/presentation/screens/login.dart';
 import 'package:dashboard_flutter/presentation/screens/metrics_mobile.dart';
@@ -30,6 +32,7 @@ class AppRouter {
   late RegisterCubit registerCubit;
   late SocketCubit socketCubit;
   late OtaCubit otaCubit;
+  late CalibrationCubit calibrationCubit;
 
   /// Cria uma instância do [AppRouter] e inicializa os cubits e o repositório necessários.
   AppRouter() {
@@ -39,6 +42,7 @@ class AppRouter {
     registerCubit = RegisterCubit(repository: repository);
     socketCubit = SocketCubit();
     otaCubit = OtaCubit(repository: repository);
+    calibrationCubit = CalibrationCubit(repository: repository);
   }
 
   /// Gera uma rota para a aplicação com base nas configurações fornecidas.
@@ -58,7 +62,8 @@ class AppRouter {
                   providers: [
                     BlocProvider.value(value: httpCubit),
                     BlocProvider.value(value: loginCubit),
-                    BlocProvider.value(value: socketCubit)
+                    BlocProvider.value(value: socketCubit),
+                    BlocProvider.value(value: calibrationCubit),
                   ],
                   child: _checkAuthentication(loginCubit, DashboardPage()),
                 ),
@@ -157,6 +162,21 @@ class AppRouter {
                   ],
                   child:
                       _checkAuthentication(loginCubit, const OtaPage()),
+                ),
+            settings: settings);
+      case "/calibration":
+        return MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider.value(value: httpCubit),
+                    BlocProvider.value(value: loginCubit),
+                    BlocProvider.value(value: socketCubit),
+                    BlocProvider.value(value: registerCubit),
+                    BlocProvider.value(value: otaCubit),
+                    BlocProvider.value(value: calibrationCubit),
+                  ],
+                  child:
+                      _checkAuthentication(loginCubit, const CalibrationPage()),
                 ),
             settings: settings);
       default:
