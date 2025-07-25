@@ -76,21 +76,21 @@ class Metrics extends StatelessWidget {
                           constraints: constraints,
                           title:
                               "Média das medições ${selectedDays == '' ? selectedDays : 'nos últimos $selectedDays dias'}",
-                          data: httpCubit.selectedMetrics?['media']),
+                          data: toDouble(httpCubit.selectedMetrics?['media'])),
                       const SizedBox(
                         height: 15,
                       ),
                       metricsWidget(
                           constraints: constraints,
                           title: "Valor máximo ${selectedDays == '' ? selectedDays : 'nos últimos $selectedDays dias'}",
-                          data: httpCubit.selectedMetrics?['valor_maximo']),
+                          data: toDouble(httpCubit.selectedMetrics?['valor_maximo'])),
                       const SizedBox(
                         height: 15,
                       ),
                       metricsWidget(
                           constraints: constraints,
                           title: "Valor mínimo ${selectedDays == '' ? selectedDays : 'nos últimos $selectedDays dias'}",
-                          data: httpCubit.selectedMetrics?['valor_minimo'])
+                          data: toDouble(httpCubit.selectedMetrics?['valor_minimo']))
                     ],
                   ),
                 );
@@ -265,4 +265,8 @@ class metricsWidget extends StatelessWidget {
           ],
         ));
   }
+}
+
+double? toDouble(dynamic value) {
+  return value is num ? value.toDouble() : null;
 }
