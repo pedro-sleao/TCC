@@ -111,7 +111,8 @@ class HttpCubit extends Cubit<HttpState> {
   ///
   /// Retorna uma lista com os nomes dos locais extraídos da lista de dados de locais.
   List<String> getLocalList() {
-    return localDataList!.map((e) => e.localName!).toList();
+    // return localDataList!.map((e) => e.localName!).toList();
+    return localDataList?.map((e) => e.localName ?? '').toList() ?? [""]; // "" na lista so para evitar erro ao tentar ler o primeiro local da lista
   }
 
   /// Define o número de dias passados para consultas de dados.

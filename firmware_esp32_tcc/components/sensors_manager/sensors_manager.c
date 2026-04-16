@@ -90,20 +90,22 @@ static void sensors_manager_task(void *parm) {
                 get_adc_avarage(TURBIDITY_SENSOR, &turbidity_adc_value, 10);
                 disable_sensor(TURBIDITY_SENSOR);
 
-                enable_sensor(TDS_SENSOR);
-                get_adc_avarage_voltage(TDS_SENSOR, &tds_voltage, 10);
-                disable_sensor(TDS_SENSOR);
-
                 enable_sensor(PH_SENSOR);
                 get_adc_avarage_voltage(PH_SENSOR, &ph_voltage, 10);
                 disable_sensor(PH_SENSOR);
+
+                enable_sensor(TDS_SENSOR);
+                get_adc_avarage_voltage(TDS_SENSOR, &tds_voltage, 10);
+                disable_sensor(TDS_SENSOR);
+                
                 adc_deinit();
 
-                xSemaphoreGive(adc_mutex);
-            }
                 enable_sensor(TEMPERATURE_SENSOR);
                 ds18b20_measure_and_read(GPIO_NUM_4, TEMPERATURE_SENSOR_ADDR, &temperature);
                 disable_sensor(TEMPERATURE_SENSOR);
+
+                xSemaphoreGive(adc_mutex);
+            }
 
             // Prepare message to mqtt
             // turbidity
@@ -119,8 +121,11 @@ static void sensors_manager_task(void *parm) {
             // b = 6.86 + m*CALIBRACAO_PH6_86;
             m = (9.18 - 6.86)/(ph_voltage_6_86 - ph_voltage_9_18);
             b = 6.86 + m*ph_voltage_6_86;
-            ph = -8.85*ph_voltage + 22.2;
+            ph = -m*ph_voltage + b;
 
+            ESP_LOGI(TAG, "ph_voltage = %.2f", ph_voltage);
+            ESP_LOGI(TAG, "ph_voltage_6_86 = %.2f", ph_voltage_6_86);
+            ESP_LOGI(TAG, "ph_voltage_9_18 = %.2f", ph_voltage_9_18);
             ESP_LOGI(TAG, "PH_M = %.2f", m);
             ESP_LOGI(TAG, "PH_B = %.2f", b);
             
@@ -234,7 +239,7 @@ static void calibrate_ph_task(void *parm) {
         mqtt_publish(topic, message);
     }
 
-    if (expected_value == 9.18) {
+    if (expected_value == 9.18f) {
         ph_voltage_9_18 = measured;
         err = nvs_set_blob(my_handle, "calib_9_18", &ph_voltage_9_18, sizeof(ph_voltage_9_18));
         if (err != ESP_OK) {
@@ -262,6 +267,9 @@ static void calibrate_ph_task(void *parm) {
     nvs_close(my_handle);
 
     ESP_LOGI(TAG, "pH calibration task done");
+    ESP_LOGI(TAG, "Measured = %.2f", measured);
+    ESP_LOGI(TAG, "ph_voltage_6_86 = %.2f", ph_voltage_6_86);
+    ESP_LOGI(TAG, "ph_voltage_9_18 = %.2f", ph_voltage_9_18);
 
     snprintf(message, sizeof(message), "Calibration done");
     mqtt_publish(topic, message);
@@ -277,7 +285,7 @@ static void calibrate_tds_task(void *parm) {
     char message[128];
 
     float expected_value = *((float*)parm);
-    float measured;
+    float measured, tds, compensationCoefficient, compensationVoltage, temperature;
 
     snprintf(topic, sizeof(topic), "devices/%s/tds_calibration_response", device_info_get_id());
 
@@ -287,6 +295,10 @@ static void calibrate_tds_task(void *parm) {
         get_adc_avarage_voltage(TDS_SENSOR, &measured, 10);
         disable_sensor(TDS_SENSOR);
         adc_deinit();
+
+        enable_sensor(TEMPERATURE_SENSOR);
+        ds18b20_measure_and_read(GPIO_NUM_4, TEMPERATURE_SENSOR_ADDR, &temperature);
+        disable_sensor(TEMPERATURE_SENSOR);
         xSemaphoreGive(adc_mutex);
     } else {
         ESP_LOGI(TAG, "Error on TDS calibration");
@@ -295,7 +307,13 @@ static void calibrate_tds_task(void *parm) {
         vTaskDelete(NULL);
     }
 
-    tds_correction_factor = expected_value / measured;
+    compensationCoefficient = 1.0+0.02*(temperature-25.0);    //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
+    compensationVoltage = measured/compensationCoefficient;
+    tds = fmaxf(0.0f, (133.42*compensationVoltage*compensationVoltage*compensationVoltage - 255.86*compensationVoltage*compensationVoltage + 857.39*compensationVoltage)*0.5 - 59);
+
+    ESP_LOGI(TAG, "Measured = %.2f", tds);
+    tds_correction_factor = expected_value / tds;
+    ESP_LOGI(TAG, "tds_correction_factor = %.2f", tds_correction_factor);
 
     err = nvs_open("storage", NVS_READWRITE, &my_handle);
     if (err != ESP_OK) {
